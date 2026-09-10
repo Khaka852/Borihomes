@@ -1,0 +1,61 @@
+<h2>Add Property</h2>
+<p style="color:var(--ink-500);">New listings are submitted as <strong>Pending Approval</strong> until reviewed by an administrator.</p>
+<div id="addAlert"></div>
+<form id="addPropertyForm" class="table-wrap" style="padding:24px;max-width:720px;">
+  <div class="form-row">
+    <div class="form-group"><label>Property Type</label>
+      <select class="form-control" name="type" required>
+        <option>Single Room</option><option>Self Contain</option><option>1 Bedroom</option>
+        <option>2 Bedroom</option><option>3 Bedroom</option><option>Shared Apartment</option>
+      </select>
+    </div>
+    <div class="form-group"><label>General Location</label>
+      <select class="form-control" name="location_area" required>
+        <option>Near Kenpoly</option><option>Bori Town Centre</option><option>Kpean Road Area</option>
+        <option>Government Layout, Bori</option><option>Zaakpon Junction</option><option>Bori-Kono Road</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group"><label>Title</label><input class="form-control" name="title" placeholder="e.g. Neat 1 Bedroom Flat Near Kenpoly" required /></div>
+  <div class="form-row">
+    <div class="form-group"><label>Annual Price (₦)</label><input class="form-control" type="number" name="price" min="1" required /></div>
+    <div class="form-group"><label>Bedrooms / Bathrooms</label>
+      <div style="display:flex;gap:8px;">
+        <input class="form-control" type="number" name="bedrooms" min="0" placeholder="Bedrooms" required />
+        <input class="form-control" type="number" name="bathrooms" min="0" placeholder="Bathrooms" required />
+      </div>
+    </div>
+  </div>
+  <div class="form-group"><label>Description</label><textarea class="form-control" name="description" required></textarea></div>
+  <div class="form-group"><label>Amenities (comma separated)</label><input class="form-control" name="amenities" placeholder="Water Supply, Prepaid Meter, Fenced Compound" /></div>
+
+  <hr style="margin:24px 0;border-color:var(--ink-100);" />
+  <h3 style="font-size:1rem;">Private Information (never shown publicly)</h3>
+  <div class="form-group"><label>Full/Exact Address</label><input class="form-control" name="full_address" required /></div>
+  <div class="form-row">
+    <div class="form-group"><label>Landlord Name</label><input class="form-control" name="landlord_name" required /></div>
+    <div class="form-group"><label>Landlord Phone</label><input class="form-control" name="landlord_phone" required /></div>
+  </div>
+  <div class="form-group"><label>Landlord Email (optional)</label><input class="form-control" type="email" name="landlord_email" /></div>
+  <div class="form-group"><label>Internal Notes (optional)</label><textarea class="form-control" name="internal_notes"></textarea></div>
+
+  <button class="btn btn-primary" type="submit">Submit for Approval</button>
+</form>
+<script>
+document.getElementById('addPropertyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const data = Object.fromEntries(fd);
+  data.amenities = data.amenities ? data.amenities.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const alertBox = document.getElementById('addAlert');
+  try {
+    const res = await fetch('/api/agent/properties', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || (result.errors && result.errors[0].msg) || 'Failed to submit property.');
+    alertBox.innerHTML = `<div class="alert alert-success">Property ${result.property_id} submitted as ${result.status}.</div>`;
+    e.target.reset();
+  } catch (err) {
+    alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+  }
+});
+</script>

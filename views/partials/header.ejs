@@ -1,0 +1,33 @@
+<header class="navbar">
+  <div class="container">
+    <a href="/" class="brand"><span class="brand-mark">BH</span> BoriHomes</a>
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <a href="/properties">Find a Home</a>
+      <a href="/how-it-works">How It Works</a>
+      <a href="/about">About</a>
+      <a href="/contact">Contact</a>
+    </nav>
+    <div class="nav-cta">
+      <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+        <a href="<%= currentUser.role === 'admin' ? '/admin' : '/agent' %>" class="btn btn-outline btn-sm">Dashboard</a>
+      <% } else { %>
+        <a href="/login" class="btn btn-outline btn-sm">Agent / Admin Login</a>
+      <% } %>
+      <a href="/properties" class="btn btn-primary btn-sm">Find a Home</a>
+    </div>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/">Home</a>
+    <a href="/properties">Find a Home</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+      <a href="<%= currentUser.role === 'admin' ? '/admin' : '/agent' %>">Dashboard</a>
+    <% } else { %>
+      <a href="/login">Agent / Admin Login</a>
+    <% } %>
+  </div>
+</header>

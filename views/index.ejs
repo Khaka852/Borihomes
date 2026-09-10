@@ -1,0 +1,98 @@
+<section class="hero">
+  <div class="container hero-inner">
+    <span class="eyebrow">Bori, Rivers State</span>
+    <h1>Find Your Place in <span>Bori.</span></h1>
+    <p class="lead">Discover comfortable and affordable homes around Bori, with options suitable for Kenpoly students, residents and families.</p>
+  </div>
+  <div class="container">
+    <form class="search-box" action="/properties" method="GET">
+      <select name="location">
+        <option value="All">All Bori Areas</option>
+        <option value="Near Kenpoly">Near Kenpoly</option>
+        <option value="Other">Other Bori Areas</option>
+      </select>
+      <select name="type">
+        <option value="All">Any Property Type</option>
+        <option value="Single Room">Single Room</option>
+        <option value="Self Contain">Self Contain</option>
+        <option value="1 Bedroom">1 Bedroom</option>
+        <option value="2 Bedroom">2 Bedroom</option>
+        <option value="3 Bedroom">3 Bedroom</option>
+        <option value="Shared Apartment">Shared Apartment</option>
+      </select>
+      <select name="budget">
+        <option value="All">Any Budget</option>
+        <option value="100-150">₦100k – ₦150k</option>
+        <option value="150-200">₦150k – ₦200k</option>
+        <option value="200-300">₦200k – ₦300k</option>
+        <option value="300-500">₦300k – ₦500k</option>
+        <option value="500plus">₦500k+</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Search Homes</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Featured</span>
+      <h2>Featured Homes in Bori</h2>
+      <p>A selection of well-rated, available properties across Bori — updated regularly.</p>
+    </div>
+    <div class="property-grid">
+      <% featured.forEach(property => { %>
+        <%- include('partials/property-card', { property }) %>
+      <% }) %>
+    </div>
+    <div style="text-align:center;margin-top:32px;">
+      <a href="/properties" class="btn btn-outline">View All Properties</a>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-tint">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Why BoriHomes</span>
+      <h2>Built for how people actually search in Bori</h2>
+    </div>
+    <div class="grid-4">
+      <div class="feature-card">
+        <div class="feature-icon">📍</div>
+        <h3>Local Focus</h3>
+        <p>Built specifically for people searching for accommodation in Bori, with Kenpoly students in mind.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Easy Search</h3>
+        <p>Find properties according to your budget, location and property type in a few taps.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✅</div>
+        <h3>Verified Listings</h3>
+        <p>Properties are reviewed and approved by our team before they go live publicly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤝</div>
+        <h3>Agent Connection</h3>
+        <p>Connect with the responsible agent instead of exposing private landlord information.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">How It Works</span>
+      <h2>Get into a home in four simple steps</h2>
+    </div>
+    <div class="grid-4">
+      <div class="step-card"><div class="step-num">1</div><h3>Search</h3><p>Find properties that match your needs and budget.</p></div>
+      <div class="step-card"><div class="step-num">2</div><h3>Explore</h3><p>View photos, prices, amenities and property information.</p></div>
+      <div class="step-card"><div class="step-num">3</div><h3>Contact</h3><p>Send an enquiry to the responsible agent.</p></div>
+      <div class="step-card"><div class="step-num">4</div><h3>Inspect</h3><p>Request a property inspection at a time that works for you.</p></div>
+    </div>
+  </div>
+</section>

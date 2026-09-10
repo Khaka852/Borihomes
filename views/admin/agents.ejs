@@ -1,0 +1,58 @@
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+  <h2 style="margin:0;">Agents</h2>
+  <button class="btn btn-primary btn-sm" onclick="openModal('addAgentModal')">+ Add Agent</button>
+</div>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Properties</th><th>Actions</th></tr></thead>
+      <tbody id="agentRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addAgentModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Add Agent</h3><button class="modal-close" onclick="closeModal('addAgentModal')">&times;</button></div>
+    <div id="agentAlert"></div>
+    <form id="agentForm">
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="name" required /></div>
+      <div class="form-group"><label>Email</label><input class="form-control" type="email" name="email" required /></div>
+      <div class="form-group"><label>Phone</label><input class="form-control" name="phone" /></div>
+      <div class="form-group"><label>Temporary Password</label><input class="form-control" name="password" required /></div>
+      <button class="btn btn-primary btn-block" type="submit">Create Agent</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+async function loadAgents() {
+  const res = await fetch('/api/admin/agents');
+  const data = await res.json();
+  document.getElementById('agentRows').innerHTML = data.results.map(a => `
+    <tr>
+      <td>${a.name}</td><td>${a.email}</td><td>${a.phone || ''}</td><td>${a.propertyCount}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteAgent(${a.id})">Remove</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5">No agents yet.</td></tr>';
+}
+document.getElementById('agentForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const alertBox = document.getElementById('agentAlert');
+  try {
+    const res = await fetch('/api/admin/agents', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Failed to add agent.');
+    closeModal('addAgentModal'); e.target.reset(); loadAgents();
+  } catch (err) { alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`; }
+});
+async function deleteAgent(id) {
+  if (!confirm('Remove this agent? Their properties will be unassigned.')) return;
+  await fetch(`/api/admin/agents/${id}`, { method: 'DELETE' });
+  loadAgents();
+}
+loadAgents();
+</script>

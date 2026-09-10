@@ -1,0 +1,62 @@
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+  <h2 style="margin:0;">Landlords</h2>
+  <button class="btn btn-primary btn-sm" onclick="openModal('addLandlordModal')">+ Add Landlord</button>
+</div>
+<p style="color:var(--ink-500);font-size:.85rem;max-width:640px;">This information is private and is never exposed through the public website or API. Only admins and the assigned agent can view it here.</p>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Private Address</th><th>Properties</th><th>Actions</th></tr></thead>
+      <tbody id="landlordRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addLandlordModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Add Landlord</h3><button class="modal-close" onclick="closeModal('addLandlordModal')">&times;</button></div>
+    <div id="landlordAlert"></div>
+    <form id="landlordForm">
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="name" required /></div>
+      <div class="form-group"><label>Phone</label><input class="form-control" name="phone" required /></div>
+      <div class="form-group"><label>Email (optional)</label><input class="form-control" type="email" name="email" /></div>
+      <div class="form-group"><label>Private Address</label><input class="form-control" name="private_address" /></div>
+      <div class="form-group"><label>Notes (optional)</label><textarea class="form-control" name="notes"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Add Landlord</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+async function loadLandlords() {
+  const res = await fetch('/api/admin/landlords');
+  const data = await res.json();
+  document.getElementById('landlordRows').innerHTML = data.results.map(l => `
+    <tr>
+      <td>${l.name}</td><td>${l.phone}</td><td>${l.email || ''}</td>
+      <td style="max-width:220px;">${l.private_address || ''}</td>
+      <td>${l.propertyCount}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteLandlord(${l.id})">Remove</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6">No landlords yet.</td></tr>';
+}
+document.getElementById('landlordForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const alertBox = document.getElementById('landlordAlert');
+  try {
+    const res = await fetch('/api/admin/landlords', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Failed to add landlord.');
+    closeModal('addLandlordModal'); e.target.reset(); loadLandlords();
+  } catch (err) { alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`; }
+});
+async function deleteLandlord(id) {
+  if (!confirm('Remove this landlord record?')) return;
+  await fetch(`/api/admin/landlords/${id}`, { method: 'DELETE' });
+  loadLandlords();
+}
+loadLandlords();
+</script>

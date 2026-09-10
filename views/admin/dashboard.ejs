@@ -1,0 +1,23 @@
+<div class="stat-grid" id="statGrid">
+  <div class="stat-card"><div class="num">…</div><div class="label">Total Properties</div></div>
+</div>
+<div class="table-wrap" style="padding:20px;">
+  <p style="margin:0;">Use the sidebar to manage properties, approve new listings, and oversee agents, landlords, enquiries and inspections.</p>
+</div>
+<script>
+async function loadStats() {
+  const res = await fetch('/api/admin/stats');
+  const s = await res.json();
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-card"><div class="num">${s.totalProperties}</div><div class="label">Total Properties</div></div>
+    <div class="stat-card"><div class="num">${s.available}</div><div class="label">Available</div></div>
+    <div class="stat-card"><div class="num">${s.rented}</div><div class="label">Rented</div></div>
+    <div class="stat-card"><div class="num">${s.pendingApproval}</div><div class="label">Pending Approval</div></div>
+    <div class="stat-card"><div class="num">${s.totalAgents}</div><div class="label">Total Agents</div></div>
+    <div class="stat-card"><div class="num">${s.totalLandlords}</div><div class="label">Total Landlords</div></div>
+    <div class="stat-card"><div class="num">${s.totalEnquiries}</div><div class="label">Total Enquiries</div></div>
+    <div class="stat-card"><div class="num">${s.pendingInspections}</div><div class="label">Pending Inspections</div></div>
+  `;
+}
+loadStats();
+</script>

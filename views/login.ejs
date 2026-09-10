@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <a href="/" class="brand" style="margin-bottom:22px;"><span class="brand-mark">BH</span> BoriHomes</a>
+      <h2 style="margin-bottom:6px;">Agent / Admin Login</h2>
+      <p style="margin-bottom:22px;">Sign in to manage properties, enquiries and inspections.</p>
+      <div id="loginAlert"></div>
+      <form id="loginForm">
+        <div class="form-group"><label>Email</label><input class="form-control" type="email" name="email" required /></div>
+        <div class="form-group"><label>Password</label><input class="form-control" type="password" name="password" required /></div>
+        <button class="btn btn-primary btn-block" type="submit">Sign In</button>
+      </form>
+      <p style="margin-top:20px;font-size:.8rem;color:var(--ink-500);">
+        Demo admin: admin@borihomes.com / Admin@123<br/>
+        Demo agent: agent1@borihomes.com / Agent@123
+      </p>
+      <a href="/" style="display:block;text-align:center;margin-top:16px;color:var(--ink-500);font-size:.85rem;">&larr; Back to BoriHomes</a>
+    </div>
+  </div>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const alertBox = document.getElementById('loginAlert');
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Login failed.');
+        window.location.href = result.redirect;
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

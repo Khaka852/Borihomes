@@ -1,0 +1,36 @@
+<h2>Enquiries</h2>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>#</th><th>Property</th><th>Customer</th><th>Contact</th><th>Message</th><th>Status</th></tr></thead>
+      <tbody id="enqRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+async function loadEnquiries() {
+  const res = await fetch('/api/agent/enquiries');
+  const data = await res.json();
+  const tbody = document.getElementById('enqRows');
+  if (!data.results.length) { tbody.innerHTML = '<tr><td colspan="6">No enquiries yet.</td></tr>'; return; }
+  tbody.innerHTML = data.results.map(e => `
+    <tr>
+      <td>#${e.id}</td>
+      <td>${e.prop_code}<br/><span style="color:var(--ink-500);font-size:.8rem;">${e.title}</span></td>
+      <td>${e.customer_name}</td>
+      <td>${e.customer_phone}${e.customer_email ? '<br/>'+e.customer_email : ''}</td>
+      <td style="max-width:260px;">${e.message || ''}</td>
+      <td>
+        <select onchange="updateEnquiry(${e.id}, this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--ink-300);">
+          ${['New','Contacted','Closed'].map(s => `<option value="${s}" ${s===e.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+async function updateEnquiry(id, status) {
+  await fetch(`/api/agent/enquiries/${id}/status`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status}) });
+  loadEnquiries();
+}
+loadEnquiries();
+</script>
