@@ -2,8 +2,34 @@ const bcrypt = require('bcryptjs');
 const db = require('./connection');
 const createSchema = require('./schema');
 
+// Creates or updates the admin account from ADMIN_EMAIL / ADMIN_PASSWORD
+// environment variables. If those aren't set, falls back to the demo
+// admin login (admin@borihomes.com / Admin@123) so local testing still works
+// out of the box. Real credentials should always be set via environment
+// variables — never hardcoded here — since this file is committed to git.
+function ensureAdminFromEnv() {
+  const email = (process.env.ADMIN_EMAIL || 'admin@borihomes.com').trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || 'Admin@123';
+  const hash = bcrypt.hashSync(password, 10);
+
+  const existingAdmin = db.prepare(`SELECT * FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1`).get();
+  if (existingAdmin) {
+    db.prepare('UPDATE users SET email = ?, password_hash = ? WHERE id = ?').run(email, hash, existingAdmin.id);
+  } else {
+    db.prepare(`INSERT INTO users (name, email, phone, password_hash, role) VALUES (?,?,?,?,'admin')`)
+      .run('BoriHomes Admin', email, '', hash);
+  }
+}
+
 function seedDatabase({ force = false } = {}) {
   createSchema();
+
+  // Keeps the admin login in sync with ADMIN_EMAIL / ADMIN_PASSWORD environment
+  // variables, on every boot — regardless of whether demo data already exists.
+  // This means the real admin password never has to be written into any file
+  // that gets committed to GitHub; it only ever lives in your private
+  // environment variables (.env locally, or the hosting platform's dashboard).
+  ensureAdminFromEnv();
 
   const propertyCount = db.prepare('SELECT COUNT(*) as c FROM properties').get().c;
   if (propertyCount > 0 && !force) {
@@ -48,10 +74,11 @@ function seedDatabase({ force = false } = {}) {
   `);
 
   // --- Users: 1 admin + 3 agents ---
-  const passAdmin = bcrypt.hashSync('Admin@123', 10);
+  // The admin row was wiped above (if force=true) — recreate it from env vars,
+  // not hardcoded demo values, so a real admin password is never overwritten
+  // with the demo one during a manual reseed.
+  if (force) ensureAdminFromEnv();
   const passAgent = bcrypt.hashSync('Agent@123', 10);
-
-  insertUser.run('BoriHomes Admin', 'admin@borihomes.com', '08030000000', passAdmin, 'admin');
 
   const agentUsers = [
     { name: 'Chidinma Okoro', email: 'agent1@borihomes.com', phone: '08031111111' },
@@ -148,7 +175,7 @@ function seedDatabase({ force = false } = {}) {
   });
 
   console.log('Seed complete:');
-  console.log(' Admin login   -> admin@borihomes.com / Admin@123');
+  console.log(` Admin login   -> using ADMIN_EMAIL / ADMIN_PASSWORD (or the demo fallback if unset)`);
   console.log(' Agent login   -> agent1@borihomes.com / Agent@123 (also agent2@, agent3@)');
   console.log(` ${demoProperties.length} demo properties created.`);
 }

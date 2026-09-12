@@ -1,10 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const db = require('../../db/connection');
 const { signToken } = require('../../middleware/auth');
 
-router.post('/login', (req, res) => {
+// Blocks brute-force password guessing: after 8 failed/attempted logins from
+// the same device/network in 15 minutes, further attempts are refused for a
+// while. This applies per IP address, so it won't lock out other visitors.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
+});
+
+router.post('/login', loginLimiter, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
 

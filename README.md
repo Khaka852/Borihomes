@@ -94,18 +94,25 @@ Visit **http://localhost:3000**
 | `JWT_SECRET`  | Secret used to sign session tokens — **change this before deploying** | `dev-secret-change-me` |
 | `NODE_ENV`    | Set to `production` to enable secure cookies       | `development`    |
 
-## 6. Test / Demo Credentials
+## 6. Admin & Demo Credentials
+
+**Admin login is not hardcoded anywhere in this code** — it's controlled entirely by two environment variables, `ADMIN_EMAIL` and `ADMIN_PASSWORD`. This is deliberate: since this project may live in a public GitHub repository, a real password must never be written into a file that gets committed there.
+
+- **Locally:** set them in your `.env` file (which is already git-ignored, so it stays private).
+- **On Render (or any host):** set them as environment variables in the hosting dashboard — never in code.
+- If left unset, the app falls back to a demo login (`admin@borihomes.com` / `Admin@123`) so local testing works out of the box.
+- These sync automatically every time the server starts — change the environment variable and restart, and the admin login updates immediately, without touching the database by hand.
 
 | Role  | Email                     | Password    |
 |-------|---------------------------|-------------|
-| Admin | admin@borihomes.com       | Admin@123   |
-| Agent | agent1@borihomes.com      | Agent@123   |
-| Agent | agent2@borihomes.com      | Agent@123   |
-| Agent | agent3@borihomes.com      | Agent@123   |
+| Admin | *set via `ADMIN_EMAIL` / `ADMIN_PASSWORD`* | *set via env vars* |
+| Agent (demo) | agent1@borihomes.com | Agent@123   |
+| Agent (demo) | agent2@borihomes.com | Agent@123   |
+| Agent (demo) | agent3@borihomes.com | Agent@123   |
 
 Log in at `/login`. Admin lands on `/admin`, agents land on `/agent`.
 
-**Change these passwords (or delete/recreate these accounts) before putting real data or real users on this system.**
+**The demo agent accounts and passwords above ARE in the code** (they're clearly fake placeholders, not real credentials) — replace or delete them via the admin dashboard once you have real agents.
 
 ## 7. Replacing Demo Images With Real Property Photos
 
@@ -128,21 +135,45 @@ Verified during build (see "How Private Landlord Information Is Protected" above
 - New agent-submitted properties start as `Pending Approval` and are **excluded from public listings** until an admin approves them
 - Filters (type, budget, location, bedrooms, availability) work against the live demo dataset without page reloads
 - Passwords are hashed with bcrypt; sessions use httpOnly JWT cookies
+- **Login brute-force protection:** `/api/auth/login` is rate-limited — after 8 attempts from the same device/network within 15 minutes, further attempts are blocked for a cooldown period. Tested: 8 failed attempts return `401`, the 9th+ return `429`.
+- **Public form spam protection:** the enquiry and inspection forms are rate-limited to 10 submissions per 15 minutes per device, to blunt spam bots without blocking a real visitor.
+
+**Note on the admin/agent login page being publicly reachable:** this is normal — nearly every website's admin area works this way. Security comes from what protects it (hashed passwords, rate limiting, generic error messages that don't reveal whether an email exists), not from hiding the page's existence.
 
 ## 9. Remaining Configuration Before Deployment
 
 - Set a strong, random `JWT_SECRET` in production
 - Set `NODE_ENV=production` so auth cookies get the `secure` flag (requires HTTPS)
+- Replace the demo admin/agent passwords with strong, unique real ones before real use
 - Replace demo property/landlord/agent data with real records (or keep a couple of demo accounts clearly marked for internal testing only)
-- Put the app behind HTTPS (e.g. via a reverse proxy like Nginx, or your hosting platform's TLS)
+- Put the app behind HTTPS (Render provides this automatically)
 - Move file uploads to a persistent object store if deploying somewhere with an ephemeral filesystem (e.g. most PaaS platforms) — local `/public/uploads` will not persist across deploys/restarts on those platforms
 - Set up regular backups of `db/borihomes.sqlite` (or migrate to Postgres/MySQL for production scale — the SQL is close to standard and could be ported with modest changes)
-- Add rate limiting to the public enquiry/inspection endpoints if this goes live, to reduce spam
-- Review and rotate the demo admin/agent credentials listed above
+- Consider adding 2-factor authentication on your GitHub and hosting accounts (these control your live site and code, separate from the app's own login)
 
 ## 10. Future-Ready Architecture (not built in v1, but schema/structure allows adding later)
 
-Saved/favourite properties, public user accounts, property reviews, verified-property badges, map integration, notifications, online payments, a landlord self-service portal, roommate matching, property analytics, and a mobile app can all be layered on top of the existing `properties`, `users`, and `agents` tables without a redesign.
+Saved/favourite properties, public user accounts, property reviews, verified-property badges, map integration, online payments, a landlord self-service portal, roommate matching, property analytics, and a mobile app can all be layered on top of the existing `properties`, `users`, and `agents` tables without a redesign.
+
+## 11. Email Notifications for New Enquiries & Inspections (optional)
+
+By default, admins/agents only see new enquiries and inspection requests by checking their dashboard. You can optionally get emailed the moment one comes in, using a free [Resend](https://resend.com) account.
+
+**Setup:**
+1. Create a free account at resend.com and grab an API key from the dashboard (API Keys → Create API Key).
+2. **Do not put this key in any file that gets committed to GitHub** — especially since this repo may be public. Instead, add it directly as an environment variable in your hosting dashboard (e.g. Render → your service → Environment).
+3. Add these environment variables on Render (or in your local `.env` for testing):
+   - `RESEND_API_KEY` — the key from Resend
+   - `ADMIN_NOTIFICATION_EMAIL` — the email address that should receive notifications
+   - `RESEND_FROM_ADDRESS` — optional, defaults to `BoriHomes <onboarding@resend.dev>`
+
+**Important limitation:** until you verify your own sending domain on Resend, their free/sandbox mode only allows sending emails **to the same email address the Resend account was signed up with**. This is a restriction from Resend, not a bug here. If you want to notify a different email address (or multiple people), verify a domain on Resend first.
+
+If these environment variables aren't set, the site works exactly as before — it just skips sending the email (logged quietly, doesn't affect the customer's enquiry/inspection submission in any way).
+
+## 12. WhatsApp Connection for Customers
+
+After a customer submits an enquiry or inspection request, they're shown a "Chat on WhatsApp" button that opens a pre-filled conversation directly with the assigned agent's WhatsApp number — no extra setup required, this works automatically using each agent's phone number already on file. Just make sure agent phone numbers are entered in the format they'd normally be dialled locally (e.g. `08031234567`) — the system converts this to WhatsApp's required international format automatically.
 
 ## 11. Deploying to Render (get a real, permanent website link)
 

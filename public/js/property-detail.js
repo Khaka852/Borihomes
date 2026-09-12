@@ -22,7 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || (result.errors && result.errors[0].msg) || 'Something went wrong.');
-      alertBox.innerHTML = `<div class="alert alert-success">Enquiry #${result.enquiryNumber} sent for ${result.property}. ${result.message}</div>`;
+      let html = `<div class="alert alert-success">Enquiry #${result.enquiryNumber} sent for ${result.property}. ${result.message}</div>`;
+      if (result.whatsapp && result.whatsapp.link) {
+        html += `<a href="${result.whatsapp.link}" target="_blank" rel="noopener" class="btn btn-primary btn-block" style="background:#25D366;border-color:#25D366;margin-top:4px;">💬 Chat with ${result.whatsapp.agentName} on WhatsApp</a>`;
+      }
+      alertBox.innerHTML = html;
       e.target.reset();
     } catch (err) {
       alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
@@ -44,7 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || (result.errors && result.errors[0].msg) || 'Something went wrong.');
-      alertBox.innerHTML = `<div class="alert alert-success">Inspection request received for ${result.property}. ${result.message}</div>`;
+      let html = `<div class="alert alert-success">Inspection request received for ${result.property}. ${result.message}</div>`;
+      if (result.whatsapp && result.whatsapp.link) {
+        html += `<a href="${result.whatsapp.link}" target="_blank" rel="noopener" class="btn btn-primary btn-block" style="background:#25D366;border-color:#25D366;margin-top:4px;">💬 Chat with ${result.whatsapp.agentName} on WhatsApp</a>`;
+      }
+      alertBox.innerHTML = html;
       e.target.reset();
     } catch (err) {
       alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;

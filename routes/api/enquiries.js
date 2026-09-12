@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const db = require('../../db/connection');
+const { publicFormLimiter } = require('../../middleware/rateLimiters');
+const { buildWhatsAppLink } = require('../../utils/whatsapp');
+const { sendAdminNotification } = require('../../utils/email');
 
 router.post(
   '/',
+  publicFormLimiter,
   [
     body('name').trim().notEmpty().withMessage('Name is required.'),
     body('phone').trim().isLength({ min: 7 }).withMessage('A valid phone number is required.'),
@@ -31,12 +35,34 @@ router.post(
       )
       .run(property.id, name, phone, email || null, message, preferred_contact || 'phone', property.agent_id);
 
+    // Build a ready-to-send WhatsApp link so the customer can message the
+    // assigned agent directly, with the property + their message pre-filled.
+    let whatsapp = null;
+    if (property.agent_id) {
+      const agent = db.prepare(`
+        SELECT u.name, u.phone FROM agents a JOIN users u ON u.id = a.user_id WHERE a.id = ?
+      `).get(property.agent_id);
+      if (agent && agent.phone) {
+        const waMessage = `Hi ${agent.name}, I'm ${name}. I'm interested in ${property.property_id} — ${message}`;
+        whatsapp = { agentName: agent.name, link: buildWhatsAppLink(agent.phone, waMessage) };
+      }
+    }
+
     res.status(201).json({
       enquiryNumber: result.lastInsertRowid,
       property: property.property_id,
       status: 'New',
       message: 'Your enquiry has been sent to the assigned agent.',
+      whatsapp,
     });
+
+    // Fire-and-forget — doesn't delay the response to the customer.
+    sendAdminNotification(
+      `New Enquiry — ${property.property_id}`,
+      `<p><strong>${name}</strong> (${phone}${email ? `, ${email}` : ''}) enquired about <strong>${property.property_id} — ${property.title}</strong>.</p>
+       <p>Message: ${message}</p>
+       <p>Assigned agent: ${whatsapp ? whatsapp.agentName : 'Unassigned'}</p>`
+    );
   }
 );
 
