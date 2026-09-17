@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const grid = document.getElementById('resultsGrid');
   const countEl = document.getElementById('resultsCount');
   const emptyState = document.getElementById('emptyState');
+  const suggestionsGrid = document.getElementById('suggestionsGrid');
   const clearBtn = document.getElementById('clearFiltersBtn');
 
   // Pre-fill from URL query params (e.g. coming from homepage hero search)
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadResults() {
     countEl.textContent = 'Loading properties…';
     grid.innerHTML = '';
+    suggestionsGrid.innerHTML = '';
     emptyState.style.display = 'none';
 
     const query = new URLSearchParams(new FormData(form)).toString();
@@ -25,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!data.results || data.results.length === 0) {
         countEl.textContent = '0 properties found';
         emptyState.style.display = 'block';
+        if (data.suggestions && data.suggestions.length) {
+          suggestionsGrid.innerHTML = data.suggestions.map(propertyCardHTML).join('');
+          initCarousels(suggestionsGrid);
+        }
         return;
       }
 
@@ -37,6 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   form.querySelectorAll('select').forEach((el) => el.addEventListener('change', loadResults));
+
+  // Text fields (the location typing box) should search as the person types,
+  // not only once they click away — but debounced so we're not firing a
+  // request on every single keystroke.
+  let debounceTimer;
+  form.querySelectorAll('input[type="text"]').forEach((el) => {
+    el.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(loadResults, 400);
+    });
+  });
+
   clearBtn.addEventListener('click', () => {
     form.reset();
     loadResults();

@@ -5,8 +5,9 @@
 
 const db = require('./connection');
 
-function createSchema() {
-  db.exec(`
+async function createSchema() {
+  await db.exec(`PRAGMA foreign_keys = ON;`);
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -99,6 +100,22 @@ function createSchema() {
       message TEXT,
       status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Confirmed','Completed','Cancelled')),
       notes TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- "Become an Agent" applications. These do NOT create a login account by
+    -- themselves — admin reviews each one and manually creates the agent
+    -- account (via the existing Agents screen) once they've vetted the
+    -- person. This avoids letting anyone on the internet self-register
+    -- straight into a dashboard with property-management access.
+    CREATE TABLE IF NOT EXISTS agent_applications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT,
+      area_covered TEXT,
+      experience TEXT,
+      status TEXT NOT NULL DEFAULT 'New' CHECK(status IN ('New','Contacted','Approved','Declined')),
       created_at TEXT DEFAULT (datetime('now'))
     );
 

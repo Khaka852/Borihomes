@@ -10,10 +10,11 @@
       </select>
     </div>
     <div class="form-group"><label>General Location</label>
-      <select class="form-control" name="location_area" required>
-        <option>Near Kenpoly</option><option>Bori Town Centre</option><option>Kpean Road Area</option>
-        <option>Government Layout, Bori</option><option>Zaakpon Junction</option><option>Bori-Kono Road</option>
+      <select class="form-control" name="location_area" id="locationSelect" required>
+        <% locations.forEach(area => { %><option value="<%= area %>"><%= area %></option><% }) %>
+        <option value="Other Areas">Other (type below)</option>
       </select>
+      <input class="form-control" id="locationOtherInput" placeholder="Type the street/area name" style="display:none;margin-top:8px;" />
     </div>
   </div>
   <div class="form-group"><label>Title</label><input class="form-control" name="title" placeholder="e.g. Neat 1 Bedroom Flat Near Kenpoly" required /></div>
@@ -30,6 +31,32 @@
   <div class="form-group"><label>Amenities (comma separated)</label><input class="form-control" name="amenities" placeholder="Water Supply, Prepaid Meter, Fenced Compound" /></div>
 
   <hr style="margin:24px 0;border-color:var(--ink-100);" />
+  <h3 style="font-size:1rem;">Photos</h3>
+  <% if (photosEnabled) { %>
+    <p style="color:var(--ink-500);font-size:.85rem;margin-top:-8px;">Add the 5 required photos below. You can add more optional photos afterwards too.</p>
+    <div class="photo-upload-grid" id="photoUploadGrid">
+      <% [['room','Room / Interior'],['toilet','Toilet / Bathroom'],['kitchen','Kitchen'],['balcony','Balcony / Exterior'],['compound','Full Compound / Building']].forEach(([type, label]) => { %>
+        <div class="photo-slot" data-type="<%= type %>">
+          <label class="photo-slot-drop" for="photo-<%= type %>">
+            <img class="photo-slot-preview" style="display:none;" />
+            <span class="photo-slot-placeholder">📷<br/><%= label %><br/><small>Required</small></span>
+          </label>
+          <input type="file" id="photo-<%= type %>" accept="image/*" class="photo-slot-input" data-type="<%= type %>" style="display:none;" />
+        </div>
+      <% }) %>
+    </div>
+    <div class="form-group" style="margin-top:14px;"><label>Optional Extra Photos (living room, parking, entrance, etc.)</label>
+      <input type="file" id="extraPhotosInput" accept="image/*" multiple style="display:none;" />
+      <button type="button" class="btn btn-outline btn-sm" id="addExtraPhotosBtn">+ Add Extra Photos</button>
+      <div id="extraPhotosPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"></div>
+    </div>
+  <% } else { %>
+    <div class="notice-box">
+      Direct photo upload isn't set up yet (ask your site owner to configure it — see the README's Cloudinary section). You can still submit this property now and add photos to it later once it's enabled.
+    </div>
+  <% } %>
+
+  <hr style="margin:24px 0;border-color:var(--ink-100);" />
   <h3 style="font-size:1rem;">Private Information (never shown publicly)</h3>
   <div class="form-group"><label>Full/Exact Address</label><input class="form-control" name="full_address" required /></div>
   <div class="form-row">
@@ -39,23 +66,64 @@
   <div class="form-group"><label>Landlord Email (optional)</label><input class="form-control" type="email" name="landlord_email" /></div>
   <div class="form-group"><label>Internal Notes (optional)</label><textarea class="form-control" name="internal_notes"></textarea></div>
 
-  <button class="btn btn-primary" type="submit">Submit for Approval</button>
+  <button class="btn btn-primary" type="submit" id="submitBtn">Submit for Approval</button>
 </form>
 <script>
+window.CLOUDINARY_CONFIG = {
+  cloudName: <%- JSON.stringify(cloudinaryCloudName || null) %>,
+  uploadPreset: <%- JSON.stringify(cloudinaryUploadPreset || null) %>,
+};
+</script>
+<script src="/js/agent-photo-upload.js"></script>
+<script>
+const locationSelect = document.getElementById('locationSelect');
+const locationOtherInput = document.getElementById('locationOtherInput');
+locationSelect.addEventListener('change', () => {
+  const isOther = locationSelect.value === 'Other Areas';
+  locationOtherInput.style.display = isOther ? 'block' : 'none';
+  locationOtherInput.required = isOther;
+});
+
 document.getElementById('addPropertyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(e.target);
   const data = Object.fromEntries(fd);
+  if (data.location_area === 'Other Areas' && locationOtherInput.value.trim()) {
+    data.location_area = locationOtherInput.value.trim();
+  }
   data.amenities = data.amenities ? data.amenities.split(',').map(s => s.trim()).filter(Boolean) : [];
   const alertBox = document.getElementById('addAlert');
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+
   try {
+    // Step 1: create the property record itself.
+    submitBtn.textContent = 'Saving property details…';
     const res = await fetch('/api/agent/properties', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || (result.errors && result.errors[0].msg) || 'Failed to submit property.');
-    alertBox.innerHTML = `<div class="alert alert-success">Property ${result.property_id} submitted as ${result.status}.</div>`;
+
+    // Step 2: upload and attach any selected photos (if photo upload is configured).
+    let photoResult = { uploaded: 0, failed: 0 };
+    if (window.CLOUDINARY_CONFIG.cloudName) {
+      submitBtn.textContent = 'Uploading photos…';
+      photoResult = await uploadAllPropertyPhotos(result.property_id, (done, total) => {
+        submitBtn.textContent = `Uploading photos… (${done}/${total})`;
+      });
+    }
+
+    let msg = `Property ${result.property_id} submitted as ${result.status}.`;
+    if (photoResult.uploaded > 0) msg += ` ${photoResult.uploaded} photo(s) uploaded.`;
+    if (photoResult.failed > 0) msg += ` ${photoResult.failed} photo(s) failed to upload — you can add them later from My Properties.`;
+    alertBox.innerHTML = `<div class="alert alert-success">${msg}</div>`;
     e.target.reset();
+    locationOtherInput.style.display = 'none';
+    resetPhotoSlots();
   } catch (err) {
     alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit for Approval';
   }
 });
 </script>

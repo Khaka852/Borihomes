@@ -7,6 +7,7 @@
       <a href="/how-it-works">How It Works</a>
       <a href="/about">About</a>
       <a href="/contact">Contact</a>
+      <a href="/become-agent">Become an Agent</a>
     </nav>
     <div class="nav-cta">
       <% if (typeof currentUser !== 'undefined' && currentUser) { %>
@@ -24,6 +25,7 @@
     <a href="/how-it-works">How It Works</a>
     <a href="/about">About</a>
     <a href="/contact">Contact</a>
+    <a href="/become-agent">Become an Agent</a>
     <% if (typeof currentUser !== 'undefined' && currentUser) { %>
       <a href="<%= currentUser.role === 'admin' ? '/admin' : '/agent' %>">Dashboard</a>
     <% } else { %>

@@ -6,11 +6,7 @@
   </div>
   <div class="container">
     <form class="search-box" action="/properties" method="GET">
-      <select name="location">
-        <option value="All">All Bori Areas</option>
-        <option value="Near Kenpoly">Near Kenpoly</option>
-        <option value="Other">Other Bori Areas</option>
-      </select>
+      <input type="text" name="location" list="locationSuggestions" placeholder="Type a street or area (e.g. Gokana Street)" autocomplete="off" />
       <select name="type">
         <option value="All">Any Property Type</option>
         <option value="Single Room">Single Room</option>
@@ -30,8 +26,26 @@
       </select>
       <button type="submit" class="btn btn-primary">Search Homes</button>
     </form>
+    <%- include('partials/location-datalist') %>
   </div>
 </section>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "RealEstateAgent",
+  "name": "BoriHomes",
+  "description": "Local property listing platform for Bori, Rivers State, helping Kenpoly students and residents find affordable, verified accommodation.",
+  "areaServed": {
+    "@type": "Place",
+    "name": "Bori, Rivers State, Nigeria"
+  },
+  "url": "<%= siteUrl %>",
+  "logo": "<%= siteUrl %>/images/logo.png",
+  "email": "borihomes0@gmail.com",
+  "telephone": "+2349034750061"
+}
+</script>
 
 <section class="section">
   <div class="container">
@@ -94,5 +108,14 @@
       <div class="step-card"><div class="step-num">3</div><h3>Contact</h3><p>Send an enquiry to the responsible agent.</p></div>
       <div class="step-card"><div class="step-num">4</div><h3>Inspect</h3><p>Request a property inspection at a time that works for you.</p></div>
     </div>
+  </div>
+</section>
+
+<section class="section bg-tint">
+  <div class="container" style="text-align:center;max-width:640px;">
+    <span class="eyebrow">For Agents & Landlord Reps</span>
+    <h2>Are You an Agent in Bori?</h2>
+    <p>List your properties on BoriHomes and get discovered by Kenpoly students and residents actively searching for accommodation in your area.</p>
+    <a href="/become-agent" class="btn btn-primary">Become an Agent</a>
   </div>
 </section>

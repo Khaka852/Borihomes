@@ -11,10 +11,10 @@ const BUDGET_RANGES = {
   '500plus': [500000, 999999999],
 };
 
-function getImagesFor(propertyRowIds) {
+async function getImagesFor(propertyRowIds) {
   if (!propertyRowIds.length) return {};
   const placeholders = propertyRowIds.map(() => '?').join(',');
-  const rows = db
+  const rows = await db
     .prepare(`SELECT * FROM property_images WHERE property_id IN (${placeholders}) ORDER BY display_order ASC`)
     .all(...propertyRowIds);
   const map = {};
@@ -25,8 +25,13 @@ function getImagesFor(propertyRowIds) {
   return map;
 }
 
+async function hydrate(rows) {
+  const imagesMap = await getImagesFor(rows.map((r) => r.id));
+  return rows.map((r) => toPublicProperty(r, imagesMap[r.id]));
+}
+
 // GET /api/properties?type=&budget=&location=&bedrooms=&availability=
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { type, budget, location, bedrooms, availability } = req.query;
 
   // Only approved properties are ever eligible for public listing.
@@ -45,13 +50,11 @@ router.get('/', (req, res) => {
     sql += ' AND type = ?';
     params.push(type);
   }
-  if (location && location !== 'All') {
-    if (location === 'Near Kenpoly') {
-      sql += ' AND location_area = ?';
-      params.push('Near Kenpoly');
-    } else {
-      sql += ` AND location_area != 'Near Kenpoly'`;
-    }
+  if (location && location.trim() && location.trim().toLowerCase() !== 'all') {
+    // Free-text, partial match (case-insensitive) — works whether the visitor
+    // picked a suggested street or typed something of their own.
+    sql += ' AND location_area LIKE ?';
+    params.push(`%${location.trim()}%`);
   }
   if (bedrooms && bedrooms !== 'Any') {
     if (bedrooms === '3+') {
@@ -69,25 +72,36 @@ router.get('/', (req, res) => {
 
   sql += ' ORDER BY created_at DESC';
 
-  const rows = db.prepare(sql).all(...params);
-  const imagesMap = getImagesFor(rows.map((r) => r.id));
-  const results = rows.map((r) => toPublicProperty(r, imagesMap[r.id]));
+  const rows = await db.prepare(sql).all(...params);
+  const results = await hydrate(rows);
 
-  res.json({ count: results.length, results });
+  let suggestions = [];
+  if (results.length === 0) {
+    // Nothing matched these exact filters — rather than a dead end, suggest
+    // a handful of other well-rated, available homes the visitor might like.
+    const fallbackRows = await db.prepare(`
+      SELECT * FROM properties
+      WHERE approval_status = 'approved' AND status IN ('Available','Reserved')
+      ORDER BY rating DESC LIMIT 6
+    `).all();
+    suggestions = await hydrate(fallbackRows);
+  }
+
+  res.json({ count: results.length, results, suggestions });
 });
 
 // GET /api/properties/:propertyId  (e.g. BH-000001)
-router.get('/:propertyId', (req, res) => {
-  const row = db
+router.get('/:propertyId', async (req, res) => {
+  const row = await db
     .prepare(`SELECT * FROM properties WHERE property_id = ? AND approval_status = 'approved'`)
     .get(req.params.propertyId);
 
   if (!row) return res.status(404).json({ error: 'Property not found.' });
 
-  const images = db
+  const imageRows = await db
     .prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order ASC')
-    .all(row.id)
-    .map((img) => ({ url: img.image_url, type: img.image_type }));
+    .all(row.id);
+  const images = imageRows.map((img) => ({ url: img.image_url, type: img.image_type }));
 
   res.json(toPublicProperty(row, images));
 });

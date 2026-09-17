@@ -31,11 +31,7 @@
       </div>
       <div>
         <label>Location</label>
-        <select name="location">
-          <option value="All">All Bori</option>
-          <option value="Near Kenpoly">Near Kenpoly</option>
-          <option value="Other">Other Bori Areas</option>
-        </select>
+        <input type="text" name="location" list="locationSuggestions" placeholder="Type a street or area" autocomplete="off" />
       </div>
       <div>
         <label>Bedrooms</label>
@@ -60,6 +56,8 @@
       </div>
     </form>
 
+    <%- include('partials/location-datalist') %>
+
     <div class="results-meta">
       <span id="resultsCount">Loading properties…</span>
     </div>
@@ -67,9 +65,10 @@
     <div class="property-grid" id="resultsGrid"></div>
     <div id="emptyState" class="empty-state" style="display:none;">
       <div class="icon">🏠</div>
-      <h3>No properties match your filters</h3>
-      <p>Try adjusting your budget, location or property type.</p>
+      <h3>No exact matches yet</h3>
+      <p>We couldn't find a property matching those filters right now — but here are a few other lovely homes in Bori you might like instead:</p>
     </div>
+    <div class="property-grid" id="suggestionsGrid"></div>
   </div>
 </section>
 

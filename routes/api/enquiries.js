@@ -17,18 +17,18 @@ router.post(
     body('message').trim().notEmpty().withMessage('Please include a short message.'),
     body('preferred_contact').optional().isIn(['phone', 'email', 'whatsapp']),
   ],
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { name, phone, email, property_id, message, preferred_contact } = req.body;
 
-    const property = db
+    const property = await db
       .prepare(`SELECT * FROM properties WHERE property_id = ? AND approval_status = 'approved'`)
       .get(property_id);
     if (!property) return res.status(404).json({ error: 'Property not found.' });
 
-    const result = db
+    const result = await db
       .prepare(
         `INSERT INTO enquiries (property_id, customer_name, customer_phone, customer_email, message, preferred_contact, assigned_agent_id)
          VALUES (?,?,?,?,?,?,?)`
@@ -39,7 +39,7 @@ router.post(
     // assigned agent directly, with the property + their message pre-filled.
     let whatsapp = null;
     if (property.agent_id) {
-      const agent = db.prepare(`
+      const agent = await db.prepare(`
         SELECT u.name, u.phone FROM agents a JOIN users u ON u.id = a.user_id WHERE a.id = ?
       `).get(property.agent_id);
       if (agent && agent.phone) {

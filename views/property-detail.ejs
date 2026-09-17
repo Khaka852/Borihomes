@@ -2,14 +2,29 @@
   <div class="container">
     <a href="/properties" class="btn-ghost" style="display:inline-block;margin-bottom:16px;color:var(--ink-500);">&larr; Back to all properties</a>
 
+    <% if (previewNotice) { %>
+      <div class="alert alert-error" style="margin-bottom:16px;">
+        👁️ <strong>Preview only</strong> — this listing is <strong><%= previewNotice === 'pending' ? 'Pending Approval' : 'Rejected' %></strong> and is not visible to the public yet.
+      </div>
+    <% } %>
+
     <div class="gallery-main">
-      <img id="mainGalleryImg" src="<%= property.images[0].url %>" alt="<%= property.title %>" />
+      <% if (property.images.length > 0) { %>
+        <img id="mainGalleryImg" src="<%= property.images[0].url %>" alt="<%= property.title %>" />
+      <% } else { %>
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--ink-500);background:var(--ink-100);">
+          <span style="font-size:2.5rem;">🏠</span>
+          <p style="margin:8px 0 0;font-size:.85rem;">No photos added yet</p>
+        </div>
+      <% } %>
     </div>
-    <div class="gallery-thumbs" id="galleryThumbs">
-      <% property.images.forEach((img, i) => { %>
-        <img src="<%= img.url %>" class="<%= i === 0 ? 'active' : '' %>" data-full="<%= img.url %>" alt="<%= img.type %>" />
-      <% }) %>
-    </div>
+    <% if (property.images.length > 0) { %>
+      <div class="gallery-thumbs" id="galleryThumbs">
+        <% property.images.forEach((img, i) => { %>
+          <img src="<%= img.url %>" class="<%= i === 0 ? 'active' : '' %>" data-full="<%= img.url %>" alt="<%= img.type %>" />
+        <% }) %>
+      </div>
+    <% } %>
 
     <div class="detail-grid">
       <div>
@@ -94,3 +109,20 @@
 </div>
 
 <script src="/js/property-detail.js"></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "<%= property.title.replace(/"/g, '\\\\"') %>",
+  "description": "<%= property.description.replace(/"/g, '\\\\"').replace(/\n/g, ' ') %>",
+  "image": "<%= property.images[0] ? property.images[0].url : '' %>",
+  "sku": "<%= property.id %>",
+  "offers": {
+    "@type": "Offer",
+    "price": "<%= property.price %>",
+    "priceCurrency": "NGN",
+    "availability": "<%= property.status === 'Available' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' %>"
+  }
+}
+</script>

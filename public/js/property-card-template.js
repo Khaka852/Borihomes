@@ -1,5 +1,7 @@
 function propertyCardHTML(p) {
-  const imgs = p.images.map((img) => `<img src="${img.url}" alt="${escapeHtml(p.title)} - ${img.type}" loading="lazy" />`).join('');
+  const imgs = p.images.length > 0
+    ? p.images.map((img) => `<img src="${img.url}" alt="${escapeHtml(p.title)} - ${img.type}" loading="lazy" />`).join('')
+    : `<div class="carousel-placeholder">🏠 No photos yet</div>`;
   return `
   <div class="property-card">
     <a href="/properties/${p.id}" style="display:block;">

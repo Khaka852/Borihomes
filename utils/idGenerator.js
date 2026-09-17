@@ -1,7 +1,7 @@
 const db = require('../db/connection');
 
-function nextPropertyId() {
-  const row = db.prepare(`
+async function nextPropertyId() {
+  const row = await db.prepare(`
     SELECT property_id FROM properties
     ORDER BY id DESC LIMIT 1
   `).get();

@@ -93,6 +93,10 @@ Visit **http://localhost:3000**
 | `PORT`        | Port the server listens on                        | `3000`           |
 | `JWT_SECRET`  | Secret used to sign session tokens — **change this before deploying** | `dev-secret-change-me` |
 | `NODE_ENV`    | Set to `production` to enable secure cookies       | `development`    |
+| `SITE_URL`    | Your real live URL, used for SEO tags and sharing previews | `https://borihomes.onrender.com` |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Your real admin login — see section 6  | demo fallback    |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | Hosted database — see section 15. Without these, data does NOT survive redeploys | local file fallback |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_UPLOAD_PRESET` | Photo upload — see section 7. Without these, photo upload is disabled | disabled |
 
 ## 6. Admin & Demo Credentials
 
@@ -114,16 +118,22 @@ Log in at `/login`. Admin lands on `/admin`, agents land on `/agent`.
 
 **The demo agent accounts and passwords above ARE in the code** (they're clearly fake placeholders, not real credentials) — replace or delete them via the admin dashboard once you have real agents.
 
-## 7. Replacing Demo Images With Real Property Photos
+## 7. Adding Real Property Photos (Cloudinary Setup)
 
-Demo images are plain URLs (`https://picsum.photos/seed/...`) stored per-image in the `property_images` table — they are **not** hardcoded into any component.
+Agents can upload photos directly from the **Add Property** form — 5 required slots (Room/Interior, Toilet/Bathroom, Kitchen, Balcony/Exterior, Full Compound) plus optional extras. Photos upload straight from the browser to **Cloudinary** (a free image hosting service), never touching Render's own disk — this matters because Render's free-tier storage doesn't survive redeploys, so photos need to live somewhere permanent, same reasoning as the Turso database move above.
 
-To swap in real photos for a property:
-1. Upload your images somewhere reachable by URL (your own server, S3, Cloudinary, etc.) — or add simple local file upload later using the already-installed `multer` package to serve from `/public/uploads/`.
-2. As an agent: use **My Properties → (property) → add images** via `POST /api/agent/properties/:id/images` with `{ image_url, image_type }`, or as admin, update directly via SQL/admin tooling.
-3. Delete the old demo image rows once real ones are in place (a small admin UI for reordering/removing individual images can be added on top of the existing `property_images` table — it isn't in the Version 1 UI yet, but the schema already supports it).
+**One-time setup (you do this once, takes about 5 minutes):**
+1. Go to **cloudinary.com** → sign up for a free account (25GB storage, no card required).
+2. On your Cloudinary dashboard, note your **Cloud Name** (shown right at the top).
+3. Go to **Settings → Upload** → scroll to "Upload presets" → click **Add upload preset**.
+4. Set **Signing Mode** to **Unsigned** (important — this lets the browser upload directly without needing a secret key on the server). Save it and note the **preset name**.
+5. Add both values as environment variables:
+   - `CLOUDINARY_CLOUD_NAME` = your cloud name
+   - `CLOUDINARY_UPLOAD_PRESET` = your preset name
 
-Because the 5-photo structure (`room`, `toilet`, `kitchen`, `balcony`, `compound`, plus optional `other`) is just data in a table, no front-end redesign is needed when you switch to real photos.
+That's it — no code changes needed. Until these are set, the Add Property form shows a friendly notice that photo upload isn't configured yet, and agents can still add properties without photos (and add photos later once this is set up).
+
+**Note on the "unsigned" preset:** this is Cloudinary's intended, safe way to allow direct browser uploads — the cloud name and preset name are not secrets and are fine to be visible in the page's source code. Do not confuse this with your Cloudinary **API Secret**, which should never be used this way and isn't needed for this setup at all.
 
 ## 8. Security Notes / What Was Tested
 
@@ -144,11 +154,12 @@ Verified during build (see "How Private Landlord Information Is Protected" above
 
 - Set a strong, random `JWT_SECRET` in production
 - Set `NODE_ENV=production` so auth cookies get the `secure` flag (requires HTTPS)
+- Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (see section 16 below) — without these, the site falls back to a local file that does NOT survive redeploys
+- Set `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_UPLOAD_PRESET` (see section 7 above) to enable photo upload
 - Replace the demo admin/agent passwords with strong, unique real ones before real use
 - Replace demo property/landlord/agent data with real records (or keep a couple of demo accounts clearly marked for internal testing only)
 - Put the app behind HTTPS (Render provides this automatically)
-- Move file uploads to a persistent object store if deploying somewhere with an ephemeral filesystem (e.g. most PaaS platforms) — local `/public/uploads` will not persist across deploys/restarts on those platforms
-- Set up regular backups of `db/borihomes.sqlite` (or migrate to Postgres/MySQL for production scale — the SQL is close to standard and could be ported with modest changes)
+- Turso's free tier keeps 1 day of backup history — for anything beyond that, periodically export your data (Turso's own dashboard/CLI supports this)
 - Consider adding 2-factor authentication on your GitHub and hosting accounts (these control your live site and code, separate from the app's own login)
 
 ## 10. Future-Ready Architecture (not built in v1, but schema/structure allows adding later)
@@ -175,7 +186,52 @@ If these environment variables aren't set, the site works exactly as before — 
 
 After a customer submits an enquiry or inspection request, they're shown a "Chat on WhatsApp" button that opens a pre-filled conversation directly with the assigned agent's WhatsApp number — no extra setup required, this works automatically using each agent's phone number already on file. Just make sure agent phone numbers are entered in the format they'd normally be dialled locally (e.g. `08031234567`) — the system converts this to WhatsApp's required international format automatically.
 
-## 11. Deploying to Render (get a real, permanent website link)
+## 13. Location Search — How Areas/Streets Work
+
+The location field (on the homepage search box and the properties filter page) is a **free-typing field with suggestions**, not a locked dropdown:
+
+- `utils/locations.js` holds a starter list of known Bori streets/areas — this powers the autocomplete suggestions people see as they type, and the same list is offered to agents in "Add Property".
+- A visitor can either pick a suggestion or **type absolutely anything** — the search does a partial, case-insensitive match against whatever's actually stored in the database. It is never limited to the preset list.
+- **Agents aren't limited to the preset list either** — the "Add Property" form lets them pick a known street or choose "Other" and type a brand-new one. That new area instantly becomes findable by customers typing it in, with zero code changes needed.
+- To add more streets to the autocomplete suggestions permanently, just add them to the array in `utils/locations.js` — no other file needs to change.
+- **When a search returns no matches**, instead of a dead end, the visitor is shown a friendly message and a handful of other well-rated, available properties they might like instead (see `routes/api/properties.js`, the `suggestions` field in the API response).
+
+## 14. SEO — Getting Found on Google
+
+Deploying this site doesn't automatically get it "indexed" — that only happens once Google's own crawlers visit it. What's already built in to make that process work well once it's live:
+
+- Every page has a unique, keyword-relevant title and description (not one generic blurb copy-pasted everywhere)
+- `/robots.txt` explicitly allows crawling of public pages and blocks admin/agent areas
+- `/sitemap.xml` is generated automatically and always current — every approved property gets its own entry the moment it's approved, no manual work needed
+- Social share previews (WhatsApp, Facebook, Twitter/X) show your logo, page title, and description when someone pastes a BoriHomes link into a chat
+- Structured data (the technical format search engines use to understand "this is a business" / "this is a listing with a price") is embedded on the homepage and every property page
+
+**What to actually do once the site is live, to get indexed faster than waiting passively:**
+
+1. Set the `SITE_URL` environment variable on Render to your real live URL (e.g. `https://borihomes.onrender.com`, or your custom domain later) — this makes all the SEO tags above point to the right place.
+2. Go to **search.google.com/search-console** → sign in with any Google account → add your site (use the "URL prefix" method) → verify ownership (Google offers simple options like a small file upload or a DNS record).
+3. Once verified, submit your sitemap: paste `https://yoursite.onrender.com/sitemap.xml` under "Sitemaps" in Search Console.
+4. That's genuinely it — Google typically starts indexing pages within a few days to two weeks. There's no legitimate way to force it faster.
+
+**Keywords this site is already built around** (in page titles/descriptions): "houses for rent in Bori", "self contain Bori Rivers State", "accommodation near Kenpoly", "rooms for rent Bori Rivers State". As you add real listings, keep using natural phrases like these in property titles and descriptions — that helps ranking more than any technical trick.
+
+## 15. Turso Database Setup (keeps real data safe across every redeploy)
+
+Without this, the site stores its database as a local file — which Render (and most hosting platforms) wipes on every redeploy. Turso is a free, hosted SQLite-compatible database that lives independently of your hosting, so agents' listings, enquiries, and everything else survives updates permanently.
+
+**One-time setup:**
+1. Go to **turso.tech** → sign up for a free account.
+2. Create a new database (the CLI or dashboard both work — their onboarding walks you through it).
+3. Get two values: the **database URL** (starts with `libsql://...`) and an **auth token** (a long string starting with `eyJ...`).
+4. Add both as environment variables — on Render, or in your local `.env` for development:
+   - `TURSO_DATABASE_URL`
+   - `TURSO_AUTH_TOKEN`
+
+**Never commit these to GitHub** — they belong only in environment variables (Render's Environment tab, or a local `.env` file, which is already `.gitignore`d). Without them set, the app automatically falls back to a local file — fine for testing on your own computer, but never for the live site.
+
+**How to verify it's actually working after deploying:** check your Render service's logs. If you see `No TURSO_DATABASE_URL set — using a local database file`, the environment variables didn't get picked up — double check they're saved under the correct service on Render. If that message is absent and the site loads normally, it's connected. As a stronger test: add a property as an agent, then trigger a new deploy (even a trivial one) — if the property is still there afterward, persistence is confirmed working.
+
+## 16. Deploying to Render (get a real, permanent website link)
 
 This gets your site a real URL (like `borihomes.onrender.com`) that anyone can visit — no terminal needed on your end after this one-time setup. Total cost: free, on Render's free tier.
 

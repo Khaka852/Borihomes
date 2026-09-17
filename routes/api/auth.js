@@ -5,29 +5,30 @@ const rateLimit = require('express-rate-limit');
 const db = require('../../db/connection');
 const { signToken } = require('../../middleware/auth');
 
-// Blocks brute-force password guessing: after 8 failed/attempted logins from
-// the same device/network in 15 minutes, further attempts are refused for a
-// while. This applies per IP address, so it won't lock out other visitors.
+// Blocks the crudest kind of attack — a script hammering /login thousands of
+// times a minute to guess passwords. Deliberately loose for now (won't
+// bother a real person even if they mistype their password many times) —
+// tighten this later once things are settled, per your call.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 8,
+  limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many login attempts. Please wait 15 minutes and try again.' },
+  message: { error: 'Too many login attempts. Please wait a few minutes and try again.' },
 });
 
-router.post('/login', loginLimiter, (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
+  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email.trim().toLowerCase());
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
   let agentId = null;
   if (user.role === 'agent') {
-    const agent = db.prepare('SELECT id FROM agents WHERE user_id = ?').get(user.id);
+    const agent = await db.prepare('SELECT id FROM agents WHERE user_id = ?').get(user.id);
     agentId = agent ? agent.id : null;
   }
 

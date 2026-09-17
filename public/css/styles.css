@@ -98,6 +98,7 @@ p { margin: 0 0 1em; color: var(--ink-700); }
 
 .carousel { position: relative; aspect-ratio: 4/3; background: var(--ink-100); overflow: hidden; }
 .carousel-track { display: flex; height: 100%; transition: transform .4s ease; }
+.carousel-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--ink-100); color: var(--ink-500); font-size: .85rem; flex-shrink: 0; }
 .carousel-track img { width: 100%; height: 100%; object-fit: cover; flex-shrink: 0; }
 .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(16,24,38,.55); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .9rem; opacity: 0; transition: opacity .2s; }
 .carousel:hover .carousel-btn { opacity: 1; }
@@ -122,7 +123,7 @@ p { margin: 0 0 1em; color: var(--ink-700); }
 /* Filters */
 .filters-bar { background: var(--ink-100); border-radius: var(--radius-lg); padding: 18px; display: grid; grid-template-columns: repeat(5, 1fr) auto; gap: 10px; margin-bottom: 28px; align-items: end; }
 .filters-bar label { font-size: .78rem; font-weight: 600; color: var(--ink-700); display: block; margin-bottom: 5px; }
-.filters-bar select { width: 100%; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid var(--ink-300); background: #fff; }
+.filters-bar select, .filters-bar input { width: 100%; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid var(--ink-300); background: #fff; }
 @media (max-width: 900px) { .filters-bar { grid-template-columns: repeat(2, 1fr); } }
 .results-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; color: var(--ink-500); font-size: .9rem; }
 
@@ -169,6 +170,16 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .amenity-chip { display: inline-block; background: var(--green-50); color: var(--green-700); padding: 6px 12px; border-radius: 20px; font-size: .82rem; font-weight: 600; margin: 0 6px 6px 0; }
 .sticky-card { position: sticky; top: 96px; border: 1px solid var(--ink-100); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm); }
 .notice-box { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px 14px; border-radius: var(--radius-md); font-size: .85rem; }
+
+/* Photo upload slots (agent Add Property form) */
+.photo-upload-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 560px) { .photo-upload-grid { grid-template-columns: repeat(2, 1fr); } }
+.photo-slot-drop { display: block; aspect-ratio: 1; border: 2px dashed var(--ink-300); border-radius: var(--radius-md); cursor: pointer; overflow: hidden; position: relative; background: var(--ink-100); transition: border-color .15s ease; }
+.photo-slot-drop:hover { border-color: var(--green-500); }
+.photo-slot.has-photo .photo-slot-drop { border-style: solid; border-color: var(--green-500); }
+.photo-slot-preview { width: 100%; height: 100%; object-fit: cover; }
+.photo-slot-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: .72rem; color: var(--ink-500); padding: 6px; line-height: 1.4; }
+.photo-slot-placeholder small { color: var(--red-500); font-weight: 600; }
 
 /* Footer */
 footer { background: var(--ink-900); color: #cbd2dc; padding: 48px 0 24px; margin-top: 60px; }

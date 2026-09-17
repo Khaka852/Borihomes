@@ -7,6 +7,7 @@ function initCarousels(root = document) {
 
     const track = el.querySelector('.carousel-track');
     const slides = Array.from(track.children);
+    if (slides.length === 0) return; // no photos yet — just show the placeholder, nothing to slide
     const dotsWrap = el.querySelector('.carousel-dots');
     let index = 0;
     let autoTimer = null;

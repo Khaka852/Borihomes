@@ -3,9 +3,13 @@
     <div class="carousel" data-carousel>
       <span class="badge status-<%= property.status.toLowerCase() %>"><%= property.status %></span>
       <div class="carousel-track">
-        <% property.images.forEach(img => { %>
-          <img src="<%= img.url %>" alt="<%= property.title %> - <%= img.type %>" loading="lazy" />
-        <% }) %>
+        <% if (property.images.length > 0) { %>
+          <% property.images.forEach(img => { %>
+            <img src="<%= img.url %>" alt="<%= property.title %> - <%= img.type %>" loading="lazy" />
+          <% }) %>
+        <% } else { %>
+          <div class="carousel-placeholder">🏠 No photos yet</div>
+        <% } %>
       </div>
       <button class="carousel-btn prev" aria-label="Previous">&#8249;</button>
       <button class="carousel-btn next" aria-label="Next">&#8250;</button>
