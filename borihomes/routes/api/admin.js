@@ -112,7 +112,29 @@ router.delete('/properties/:id', async (req, res) => {
 router.put('/properties/:id/approve', async (req, res) => {
   const row = await db.prepare('SELECT * FROM properties WHERE property_id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found.' });
-  await db.prepare("UPDATE properties SET approval_status='approved', status='Available' WHERE id = ?").run(row.id);
+
+  const { rating } = req.body;
+  let ratingClause = '';
+  const params = [];
+  if (rating !== undefined && rating !== null && rating !== '') {
+    const r = Number(rating);
+    if (Number.isNaN(r) || r < 0 || r > 5) return res.status(400).json({ error: 'Rating must be a number between 0 and 5.' });
+    ratingClause = ', rating = ?';
+    params.push(r);
+  }
+  params.push(row.id);
+
+  await db.prepare(`UPDATE properties SET approval_status='approved', status='Available'${ratingClause} WHERE id = ?`).run(...params);
+  res.json({ ok: true });
+});
+
+// Lets admin correct a rating any time after approval too, not just at the moment of approving.
+router.put('/properties/:id/rating', async (req, res) => {
+  const row = await db.prepare('SELECT * FROM properties WHERE property_id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found.' });
+  const r = Number(req.body.rating);
+  if (Number.isNaN(r) || r < 0 || r > 5) return res.status(400).json({ error: 'Rating must be a number between 0 and 5.' });
+  await db.prepare('UPDATE properties SET rating = ? WHERE id = ?').run(r, row.id);
   res.json({ ok: true });
 });
 
