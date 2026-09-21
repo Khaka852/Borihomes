@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof title !== 'undefined' ? title : 'BoriHomes — Find Your Place in Bori' %></title>
+  <meta name="description" content="<%= typeof description !== 'undefined' ? description : 'Find affordable, verified homes in Bori, Rivers State — built for Kenpoly students and residents. Search by budget, location and property type.' %>" />
+  <link rel="canonical" href="<%= typeof canonicalUrl !== 'undefined' ? canonicalUrl : (siteUrl + currentPath) %>" />
+
+  <!-- Social sharing preview (WhatsApp, Facebook, Twitter/X) -->
+  <meta property="og:site_name" content="BoriHomes" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="<%= typeof title !== 'undefined' ? title : 'BoriHomes — Find Your Place in Bori' %>" />
+  <meta property="og:description" content="<%= typeof description !== 'undefined' ? description : 'Find affordable, verified homes in Bori, Rivers State — built for Kenpoly students and residents.' %>" />
+  <meta property="og:image" content="<%= typeof ogImage !== 'undefined' ? ogImage : (siteUrl + '/images/logo.png') %>" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="icon" type="image/png" href="/images/logo.png" />
+</head>
+<body>
+  <%- include('header') %>
+  <main>
+    <%- body %>
+  </main>
+  <%- include('footer') %>
+  <script src="/js/main.js"></script>
+  <script src="/js/carousel.js"></script>
+</body>
+</html>

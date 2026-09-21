@@ -1,0 +1,51 @@
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+  <h2 style="margin:0;">All Properties</h2>
+</div>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>ID</th><th>Title</th><th>Type</th><th>Price</th><th>Agent</th><th>Approval</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="propRows"><tr><td colspan="8">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+async function loadProperties() {
+  const res = await fetch('/api/admin/properties');
+  const data = await res.json();
+  const tbody = document.getElementById('propRows');
+  if (!data.results.length) { tbody.innerHTML = '<tr><td colspan="8">No properties.</td></tr>'; return; }
+  tbody.innerHTML = data.results.map(p => `
+    <tr>
+      <td><strong>${p.id}</strong></td>
+      <td>${p.title}</td>
+      <td>${p.type}</td>
+      <td>${nairaFmt(p.price)}</td>
+      <td>${p.agent || '<em>Unassigned</em>'}</td>
+      <td>${statusPill(p.approval_status)}</td>
+      <td>
+        <select onchange="updateStatus('${p.id}', this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--ink-300);">
+          ${['Pending Approval','Available','Reserved','Rented','Unavailable'].map(s => `<option value="${s}" ${s===p.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td style="white-space:nowrap;">
+        ${p.approval_status === 'pending' ? `<button class="btn btn-sm btn-primary" onclick="approve('${p.id}')">Approve</button> <button class="btn btn-sm btn-danger" onclick="reject('${p.id}')">Reject</button>` : ''}
+        <a href="/properties/${p.id}" target="_blank" class="btn btn-sm btn-outline">View</a>
+        <button class="btn btn-sm btn-danger" onclick="deleteProp('${p.id}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+async function approve(id) { await fetch(`/api/admin/properties/${id}/approve`, {method:'PUT'}); loadProperties(); }
+async function reject(id) { await fetch(`/api/admin/properties/${id}/reject`, {method:'PUT'}); loadProperties(); }
+async function updateStatus(id, status) {
+  await fetch(`/api/admin/properties/${id}/status`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status}) });
+  loadProperties();
+}
+async function deleteProp(id) {
+  if (!confirm(`Delete property ${id}? This cannot be undone.`)) return;
+  await fetch(`/api/admin/properties/${id}`, { method: 'DELETE' });
+  loadProperties();
+}
+loadProperties();
+</script>

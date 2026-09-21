@@ -1,0 +1,39 @@
+<section class="section" style="padding-top:36px;">
+  <div class="container" style="max-width:600px;">
+    <span class="eyebrow">Join BoriHomes</span>
+    <h1>Become an Agent</h1>
+    <p>Are you a property agent or landlord representative in Bori? List your properties on BoriHomes and connect with Kenpoly students and residents actively looking for a home. Fill out the form below and our team will reach out to get you set up.</p>
+
+    <div id="applyAlert"></div>
+    <form id="applyForm" class="table-wrap" style="padding:24px;margin-top:16px;">
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="full_name" required /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone Number</label><input class="form-control" name="phone" required /></div>
+        <div class="form-group"><label>Email (optional)</label><input class="form-control" type="email" name="email" /></div>
+      </div>
+      <div class="form-group"><label>Area(s) You Cover in Bori</label><input class="form-control" name="area_covered" placeholder="e.g. Near Kenpoly, Market Road" /></div>
+      <div class="form-group"><label>Tell us a bit about your experience (optional)</label><textarea class="form-control" name="experience" placeholder="How long have you been an agent/landlord rep in Bori? Any properties you currently manage?"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Submit Application</button>
+    </form>
+  </div>
+</section>
+<script>
+document.getElementById('applyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  const alertBox = document.getElementById('applyAlert');
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const res = await fetch('/api/agent-applications', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || (result.errors && result.errors[0].msg) || 'Something went wrong.');
+    alertBox.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+    e.target.reset();
+  } catch (err) {
+    alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit Application';
+  }
+});
+</script>

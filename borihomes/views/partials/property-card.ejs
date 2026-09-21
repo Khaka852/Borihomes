@@ -1,0 +1,32 @@
+<div class="property-card">
+  <a href="/properties/<%= property.id %>" style="display:block;">
+    <div class="carousel" data-carousel>
+      <span class="badge status-<%= property.status.toLowerCase() %>"><%= property.status %></span>
+      <div class="carousel-track">
+        <% if (property.images.length > 0) { %>
+          <% property.images.forEach(img => { %>
+            <img src="<%= img.url %>" alt="<%= property.title %> - <%= img.type %>" loading="lazy" />
+          <% }) %>
+        <% } else { %>
+          <div class="carousel-placeholder">🏠 No photos yet</div>
+        <% } %>
+      </div>
+      <button class="carousel-btn prev" aria-label="Previous">&#8249;</button>
+      <button class="carousel-btn next" aria-label="Next">&#8250;</button>
+      <div class="carousel-dots"></div>
+    </div>
+    <div class="property-body">
+      <div class="property-id"><%= property.id %> · <%= property.type %></div>
+      <div class="property-title"><%= property.title %></div>
+      <div class="property-meta">
+        <span>📍 <%= property.location_area %></span>
+        <span><%= property.bedrooms %> Bed</span>
+        <span><%= property.bathrooms %> Bath</span>
+      </div>
+      <div class="property-foot">
+        <div class="property-price"><%= '₦' + Number(property.price).toLocaleString('en-NG') %> <small>/ year</small></div>
+        <div class="rating">★ <%= property.rating %></div>
+      </div>
+    </div>
+  </a>
+</div>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="dash-shell">
+    <aside class="dash-sidebar">
+      <div class="brand"><img src="/images/logo.png" alt="BoriHomes" class="brand-logo-chip" /> BoriHomes</div>
+      <nav>
+        <a href="/agent">📊 Dashboard</a>
+        <a href="/agent/properties">🏠 My Properties</a>
+        <a href="/agent/add-property">➕ Add Property</a>
+        <a href="/agent/enquiries">✉️ Enquiries</a>
+        <a href="/agent/inspections">📅 Inspections</a>
+        <a href="/agent/profile">👤 Profile</a>
+      </nav>
+    </aside>
+    <div class="dash-main">
+      <div class="dash-topbar">
+        <strong><%= title.split(' — ')[0] %></strong>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span style="font-size:.88rem;color:var(--ink-500);">Signed in as <%= currentUser.name %> (Agent)</span>
+          <button class="btn btn-outline btn-sm" onclick="logout()">Log Out</button>
+        </div>
+      </div>
+      <div class="dash-content">
+        <%- body %>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+  </script>
+  <script src="/js/dashboard-common.js"></script>
+</body>
+</html>

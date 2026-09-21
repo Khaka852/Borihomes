@@ -1,0 +1,128 @@
+<section class="section" style="padding-top:32px;">
+  <div class="container">
+    <a href="/properties" class="btn-ghost" style="display:inline-block;margin-bottom:16px;color:var(--ink-500);">&larr; Back to all properties</a>
+
+    <% if (previewNotice) { %>
+      <div class="alert alert-error" style="margin-bottom:16px;">
+        👁️ <strong>Preview only</strong> — this listing is <strong><%= previewNotice === 'pending' ? 'Pending Approval' : 'Rejected' %></strong> and is not visible to the public yet.
+      </div>
+    <% } %>
+
+    <div class="gallery-main">
+      <% if (property.images.length > 0) { %>
+        <img id="mainGalleryImg" src="<%= property.images[0].url %>" alt="<%= property.title %>" />
+      <% } else { %>
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--ink-500);background:var(--ink-100);">
+          <span style="font-size:2.5rem;">🏠</span>
+          <p style="margin:8px 0 0;font-size:.85rem;">No photos added yet</p>
+        </div>
+      <% } %>
+    </div>
+    <% if (property.images.length > 0) { %>
+      <div class="gallery-thumbs" id="galleryThumbs">
+        <% property.images.forEach((img, i) => { %>
+          <img src="<%= img.url %>" class="<%= i === 0 ? 'active' : '' %>" data-full="<%= img.url %>" alt="<%= img.type %>" />
+        <% }) %>
+      </div>
+    <% } %>
+
+    <div class="detail-grid">
+      <div>
+        <span class="badge status-<%= property.status.toLowerCase() %>" style="position:static;display:inline-block;margin-bottom:10px;"><%= property.status %></span>
+        <div class="property-id" style="font-size:.85rem;"><%= property.id %></div>
+        <h1 style="margin-top:6px;"><%= property.title %></h1>
+        <p style="color:var(--ink-500);">📍 <%= property.location_area %>, Bori, Rivers State</p>
+
+        <div style="display:flex;gap:24px;margin:18px 0;color:var(--ink-700);font-weight:600;">
+          <span><%= property.type %></span>
+          <span><%= property.bedrooms %> Bedroom<%= property.bedrooms === 1 ? '' : 's' %></span>
+          <span><%= property.bathrooms %> Bathroom<%= property.bathrooms === 1 ? '' : 's' %></span>
+          <span class="rating">★ <%= property.rating %></span>
+        </div>
+
+        <div class="notice-box" style="margin-bottom:24px;">
+          Exact address available through the assigned agent. For your safety, full landlord and address details are only shared once an enquiry or inspection is arranged.
+        </div>
+
+        <h3>Description</h3>
+        <p><%= property.description %></p>
+
+        <h3>Amenities</h3>
+        <div style="margin-bottom:10px;">
+          <% property.amenities.forEach(a => { %><span class="amenity-chip"><%= a %></span><% }) %>
+        </div>
+      </div>
+
+      <div>
+        <div class="sticky-card">
+          <div class="property-price" style="font-size:1.5rem;margin-bottom:4px;"><%= '₦' + Number(property.price).toLocaleString('en-NG') %> <small style="font-size:.85rem;">/ year</small></div>
+          <p style="font-size:.85rem;color:var(--ink-500);margin-bottom:18px;">Property ID: <strong><%= property.id %></strong></p>
+          <button class="btn btn-primary btn-block" style="margin-bottom:10px;" onclick="openModal('enquiryModal')">Contact Agent</button>
+          <button class="btn btn-outline btn-block" onclick="openModal('inspectionModal')">Request Inspection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Enquiry Modal -->
+<div class="modal-overlay" id="enquiryModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Contact Agent</h3><button class="modal-close" onclick="closeModal('enquiryModal')">&times;</button></div>
+    <div id="enquiryAlert"></div>
+    <form id="enquiryForm">
+      <input type="hidden" name="property_id" value="<%= property.id %>" />
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="name" required /></div>
+      <div class="form-group"><label>Phone Number</label><input class="form-control" name="phone" required /></div>
+      <div class="form-group"><label>Email (optional)</label><input class="form-control" type="email" name="email" /></div>
+      <div class="form-group">
+        <label>Preferred Contact Method</label>
+        <select class="form-control" name="preferred_contact">
+          <option value="phone">Phone Call</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Message</label><textarea class="form-control" name="message" required>I'm interested in <%= property.id %> - <%= property.title %>. Please share more details.</textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Send Enquiry</button>
+    </form>
+  </div>
+</div>
+
+<!-- Inspection Modal -->
+<div class="modal-overlay" id="inspectionModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Request Inspection</h3><button class="modal-close" onclick="closeModal('inspectionModal')">&times;</button></div>
+    <div id="inspectionAlert"></div>
+    <form id="inspectionForm">
+      <input type="hidden" name="property_id" value="<%= property.id %>" />
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="name" required /></div>
+      <div class="form-group"><label>Phone Number</label><input class="form-control" name="phone" required /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Preferred Date</label><input class="form-control" type="date" name="preferred_date" required /></div>
+        <div class="form-group"><label>Preferred Time</label><input class="form-control" type="time" name="preferred_time" required /></div>
+      </div>
+      <div class="form-group"><label>Message (optional)</label><textarea class="form-control" name="message"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Request Inspection</button>
+    </form>
+  </div>
+</div>
+
+<script src="/js/property-detail.js"></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "<%= property.title.replace(/"/g, '\\\\"') %>",
+  "description": "<%= property.description.replace(/"/g, '\\\\"').replace(/\n/g, ' ') %>",
+  "image": "<%= property.images[0] ? property.images[0].url : '' %>",
+  "sku": "<%= property.id %>",
+  "offers": {
+    "@type": "Offer",
+    "price": "<%= property.price %>",
+    "priceCurrency": "NGN",
+    "availability": "<%= property.status === 'Available' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' %>"
+  }
+}
+</script>

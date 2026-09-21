@@ -1,0 +1,22 @@
+<section class="section">
+  <div class="container" style="max-width:560px;">
+    <span class="eyebrow">Contact</span>
+    <h1>Get in Touch</h1>
+    <p>Have a question about a property, or want to list your own? Reach out and our team will respond.</p>
+    <div id="contactAlert"></div>
+    <form id="contactForm">
+      <div class="form-group"><label>Full Name</label><input class="form-control" name="name" required /></div>
+      <div class="form-group"><label>Email</label><input class="form-control" type="email" name="email" required /></div>
+      <div class="form-group"><label>Message</label><textarea class="form-control" name="message" required></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Send Message</button>
+    </form>
+    <p style="margin-top:24px;color:var(--ink-500);font-size:.9rem;">Or reach us directly at <a href="mailto:borihomes0@gmail.com" style="color:var(--green-600);">borihomes0@gmail.com</a> / +234 903 475 0061 / +234 907 893 0861.</p>
+  </div>
+</section>
+<script>
+  document.getElementById('contactForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    document.getElementById('contactAlert').innerHTML = '<div class="alert alert-success">Thanks for reaching out! This is a Version 1 demo, so general contact messages aren\'t stored yet — please use a property\'s "Contact Agent" button for real enquiries.</div>';
+    e.target.reset();
+  });
+</script>

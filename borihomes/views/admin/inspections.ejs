@@ -1,0 +1,26 @@
+<h2>All Inspection Requests</h2>
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>#</th><th>Property</th><th>Customer</th><th>Date/Time</th><th>Agent</th><th>Status</th></tr></thead>
+      <tbody id="inspRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+async function loadInspections() {
+  const res = await fetch('/api/admin/inspections');
+  const data = await res.json();
+  document.getElementById('inspRows').innerHTML = data.results.map(i => `
+    <tr>
+      <td>#${i.id}</td>
+      <td>${i.prop_code}<br/><span style="color:var(--ink-500);font-size:.8rem;">${i.title}</span></td>
+      <td>${i.customer_name}<br/>${i.customer_phone}</td>
+      <td>${i.requested_date} at ${i.requested_time}</td>
+      <td>${i.agent_name || '<em>Unassigned</em>'}</td>
+      <td>${statusPill(i.status)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="6">No inspection requests yet.</td></tr>';
+}
+loadInspections();
+</script>

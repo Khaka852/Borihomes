@@ -1,0 +1,76 @@
+<section class="section" style="padding-top:36px;">
+  <div class="container">
+    <div class="section-head" style="margin-bottom:24px;">
+      <h2>Find a Home in Bori</h2>
+      <p>Filter by type, budget, location, bedrooms and availability.</p>
+    </div>
+
+    <form class="filters-bar" id="filterForm">
+      <div>
+        <label>Property Type</label>
+        <select name="type">
+          <option value="All">All</option>
+          <option>Single Room</option>
+          <option>Self Contain</option>
+          <option>1 Bedroom</option>
+          <option>2 Bedroom</option>
+          <option>3 Bedroom</option>
+          <option>Shared Apartment</option>
+        </select>
+      </div>
+      <div>
+        <label>Budget</label>
+        <select name="budget">
+          <option value="All">All</option>
+          <option value="100-150">₦100k – ₦150k</option>
+          <option value="150-200">₦150k – ₦200k</option>
+          <option value="200-300">₦200k – ₦300k</option>
+          <option value="300-500">₦300k – ₦500k</option>
+          <option value="500plus">₦500k+</option>
+        </select>
+      </div>
+      <div>
+        <label>Location</label>
+        <input type="text" name="location" list="locationSuggestions" placeholder="Type a street or area" autocomplete="off" />
+      </div>
+      <div>
+        <label>Bedrooms</label>
+        <select name="bedrooms">
+          <option value="Any">Any</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3+">3+</option>
+        </select>
+      </div>
+      <div>
+        <label>Availability</label>
+        <select name="availability">
+          <option value="All">All</option>
+          <option value="Available">Available</option>
+          <option value="Reserved">Reserved</option>
+          <option value="Rented">Rented</option>
+        </select>
+      </div>
+      <div>
+        <button type="button" class="btn btn-outline btn-block" id="clearFiltersBtn">Clear Filters</button>
+      </div>
+    </form>
+
+    <%- include('partials/location-datalist') %>
+
+    <div class="results-meta">
+      <span id="resultsCount">Loading properties…</span>
+    </div>
+
+    <div class="property-grid" id="resultsGrid"></div>
+    <div id="emptyState" class="empty-state" style="display:none;">
+      <div class="icon">🏠</div>
+      <h3>No exact matches yet</h3>
+      <p>We couldn't find a property matching those filters right now — but here are a few other lovely homes in Bori you might like instead:</p>
+    </div>
+    <div class="property-grid" id="suggestionsGrid"></div>
+  </div>
+</section>
+
+<script src="/js/property-card-template.js"></script>
+<script src="/js/filters.js"></script>
