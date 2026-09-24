@@ -39,7 +39,7 @@ function makeSortable(state, render) {
       });
     },
     headerLabel(field, label) {
-      if (state.field !== field) return label;
+      if (state.field !== field) return label + ' ⇅';
       return label + (state.dir === 'asc' ? ' ▲' : ' ▼');
     },
   };
