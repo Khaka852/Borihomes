@@ -190,11 +190,21 @@ router.post('/agents', async (req, res) => {
 });
 
 router.delete('/agents/:id', async (req, res) => {
-  const agent = await db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params.id);
-  if (!agent) return res.status(404).json({ error: 'Not found.' });
-  await db.prepare('UPDATE properties SET agent_id = NULL WHERE agent_id = ?').run(agent.id);
-  await db.prepare('DELETE FROM users WHERE id = ?').run(agent.user_id); // cascades to agents row
-  res.json({ ok: true });
+  try {
+    const agent = await db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params.id);
+    if (!agent) return res.status(404).json({ error: 'Not found.' });
+    // Clear every reference to this agent before removing them, so no
+    // enquiry/inspection is left silently pointing at a deleted agent —
+    // matches the same protection already given to their properties below.
+    await db.prepare('UPDATE properties SET agent_id = NULL WHERE agent_id = ?').run(agent.id);
+    await db.prepare('UPDATE enquiries SET assigned_agent_id = NULL WHERE assigned_agent_id = ?').run(agent.id);
+    await db.prepare('UPDATE inspections SET agent_id = NULL WHERE agent_id = ?').run(agent.id);
+    await db.prepare('DELETE FROM users WHERE id = ?').run(agent.user_id); // cascades to agents row
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to delete agent:', err);
+    res.status(500).json({ error: 'Could not remove this agent. They may still have linked records.' });
+  }
 });
 
 // ---- Landlords ----

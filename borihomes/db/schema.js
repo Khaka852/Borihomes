@@ -122,6 +122,15 @@ async function createSchema() {
     CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status, approval_status);
     CREATE INDEX IF NOT EXISTS idx_images_property ON property_images(property_id);
     CREATE INDEX IF NOT EXISTS idx_enquiries_property ON enquiries(property_id);
+    -- A single-row marker: once the database has been seeded with demo data
+    -- one time, this record's presence means "never auto-seed again" —
+    -- regardless of how many rows exist later. This is what stops deleted
+    -- demo properties/agents from silently reappearing after a restart.
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_inspections_property ON inspections(property_id);
   `);
 
