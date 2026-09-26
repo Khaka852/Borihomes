@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Pre-fill from URL query params (e.g. coming from homepage hero search)
   const params = new URLSearchParams(window.location.search);
-  ['type', 'budget', 'location', 'bedrooms', 'availability'].forEach((key) => {
+  ['type', 'structure_type', 'budget', 'location', 'bedrooms', 'availability'].forEach((key) => {
     const val = params.get(key);
     if (val && form[key]) form[key].value = val;
   });

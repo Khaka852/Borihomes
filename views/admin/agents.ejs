@@ -51,7 +51,12 @@ document.getElementById('agentForm').addEventListener('submit', async (e) => {
 });
 async function deleteAgent(id) {
   if (!confirm('Remove this agent? Their properties will be unassigned.')) return;
-  await fetch(`/api/admin/agents/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/admin/agents/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const result = await res.json().catch(() => ({}));
+    alert(result.error || 'Could not remove this agent.');
+    return;
+  }
   loadAgents();
 }
 loadAgents();

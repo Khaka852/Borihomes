@@ -114,7 +114,11 @@ document.getElementById('addPropertyForm').addEventListener('submit', async (e) 
 
     let msg = `Property ${result.property_id} submitted as ${result.status}.`;
     if (photoResult.uploaded > 0) msg += ` ${photoResult.uploaded} photo(s) uploaded.`;
-    if (photoResult.failed > 0) msg += ` ${photoResult.failed} photo(s) failed to upload — you can add them later from My Properties.`;
+    if (photoResult.failed > 0) {
+      msg += ` ${photoResult.failed} photo(s) failed to upload`;
+      if (photoResult.firstError) msg += ` (${photoResult.firstError})`;
+      msg += ' — you can add them later from My Properties.';
+    }
     alertBox.innerHTML = `<div class="alert alert-success">${msg}</div>`;
     e.target.reset();
     locationOtherInput.style.display = 'none';

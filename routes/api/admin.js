@@ -112,7 +112,29 @@ router.delete('/properties/:id', async (req, res) => {
 router.put('/properties/:id/approve', async (req, res) => {
   const row = await db.prepare('SELECT * FROM properties WHERE property_id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Not found.' });
-  await db.prepare("UPDATE properties SET approval_status='approved', status='Available' WHERE id = ?").run(row.id);
+
+  const { rating } = req.body;
+  let ratingClause = '';
+  const params = [];
+  if (rating !== undefined && rating !== null && rating !== '') {
+    const r = Number(rating);
+    if (Number.isNaN(r) || r < 0 || r > 5) return res.status(400).json({ error: 'Rating must be a number between 0 and 5.' });
+    ratingClause = ', rating = ?';
+    params.push(r);
+  }
+  params.push(row.id);
+
+  await db.prepare(`UPDATE properties SET approval_status='approved', status='Available'${ratingClause} WHERE id = ?`).run(...params);
+  res.json({ ok: true });
+});
+
+// Lets admin correct a rating any time after approval too, not just at the moment of approving.
+router.put('/properties/:id/rating', async (req, res) => {
+  const row = await db.prepare('SELECT * FROM properties WHERE property_id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Not found.' });
+  const r = Number(req.body.rating);
+  if (Number.isNaN(r) || r < 0 || r > 5) return res.status(400).json({ error: 'Rating must be a number between 0 and 5.' });
+  await db.prepare('UPDATE properties SET rating = ? WHERE id = ?').run(r, row.id);
   res.json({ ok: true });
 });
 
@@ -168,11 +190,21 @@ router.post('/agents', async (req, res) => {
 });
 
 router.delete('/agents/:id', async (req, res) => {
-  const agent = await db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params.id);
-  if (!agent) return res.status(404).json({ error: 'Not found.' });
-  await db.prepare('UPDATE properties SET agent_id = NULL WHERE agent_id = ?').run(agent.id);
-  await db.prepare('DELETE FROM users WHERE id = ?').run(agent.user_id); // cascades to agents row
-  res.json({ ok: true });
+  try {
+    const agent = await db.prepare('SELECT * FROM agents WHERE id = ?').get(req.params.id);
+    if (!agent) return res.status(404).json({ error: 'Not found.' });
+    // Clear every reference to this agent before removing them, so no
+    // enquiry/inspection is left silently pointing at a deleted agent —
+    // matches the same protection already given to their properties below.
+    await db.prepare('UPDATE properties SET agent_id = NULL WHERE agent_id = ?').run(agent.id);
+    await db.prepare('UPDATE enquiries SET assigned_agent_id = NULL WHERE assigned_agent_id = ?').run(agent.id);
+    await db.prepare('UPDATE inspections SET agent_id = NULL WHERE agent_id = ?').run(agent.id);
+    await db.prepare('DELETE FROM users WHERE id = ?').run(agent.user_id); // cascades to agents row
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to delete agent:', err);
+    res.status(500).json({ error: 'Could not remove this agent. They may still have linked records.' });
+  }
 });
 
 // ---- Landlords ----

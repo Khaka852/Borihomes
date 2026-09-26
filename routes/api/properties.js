@@ -4,6 +4,7 @@ const db = require('../../db/connection');
 const { toPublicProperty } = require('../../utils/propertySerializer');
 
 const BUDGET_RANGES = {
+  '50-100': [50000, 100000],
   '100-150': [100000, 150000],
   '150-200': [150000, 200000],
   '200-300': [200000, 300000],
@@ -32,7 +33,7 @@ async function hydrate(rows) {
 
 // GET /api/properties?type=&budget=&location=&bedrooms=&availability=
 router.get('/', async (req, res) => {
-  const { type, budget, location, bedrooms, availability } = req.query;
+  const { type, structure_type, budget, location, bedrooms, availability } = req.query;
 
   // Only approved properties are ever eligible for public listing.
   let sql = `SELECT * FROM properties WHERE approval_status = 'approved'`;
@@ -49,6 +50,10 @@ router.get('/', async (req, res) => {
   if (type && type !== 'All') {
     sql += ' AND type = ?';
     params.push(type);
+  }
+  if (structure_type && structure_type !== 'All') {
+    sql += ' AND structure_type = ?';
+    params.push(structure_type);
   }
   if (location && location.trim() && location.trim().toLowerCase() !== 'all') {
     // Free-text, partial match (case-insensitive) — works whether the visitor

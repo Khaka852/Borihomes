@@ -66,14 +66,22 @@ async function uploadToCloudinary(file) {
   fd.append('file', file);
   fd.append('upload_preset', uploadPreset);
   const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: fd });
-  if (!res.ok) throw new Error('Upload failed');
+  if (!res.ok) {
+    let reason = `HTTP ${res.status}`;
+    try {
+      const errBody = await res.json();
+      if (errBody && errBody.error && errBody.error.message) reason = errBody.error.message;
+    } catch (e) { /* response wasn't JSON — keep the HTTP status as the reason */ }
+    throw new Error(reason);
+  }
   const data = await res.json();
   return data.secure_url;
 }
 
 // Uploads every selected photo (5 required slots + any extras) and attaches
-// them to the given property. Returns { uploaded, failed } counts — a single
-// failed photo doesn't stop the others or the property itself from saving.
+// them to the given property. Returns { uploaded, failed, firstError } —
+// firstError carries Cloudinary's actual error message (if any failed), so
+// it can be shown to the agent instead of a vague "something went wrong".
 async function uploadAllPropertyPhotos(propertyId, onProgress) {
   const jobs = [];
   document.querySelectorAll('.photo-slot-input').forEach((input) => {
@@ -83,6 +91,7 @@ async function uploadAllPropertyPhotos(propertyId, onProgress) {
 
   let uploaded = 0;
   let failed = 0;
+  let firstError = null;
   for (let i = 0; i < jobs.length; i++) {
     try {
       const url = await uploadToCloudinary(jobs[i].file);
@@ -94,8 +103,10 @@ async function uploadAllPropertyPhotos(propertyId, onProgress) {
       uploaded++;
     } catch (err) {
       failed++;
+      if (!firstError) firstError = err.message;
+      console.error('Photo upload failed:', err);
     }
     if (onProgress) onProgress(i + 1, jobs.length);
   }
-  return { uploaded, failed };
+  return { uploaded, failed, firstError };
 }

@@ -122,8 +122,31 @@ async function createSchema() {
     CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status, approval_status);
     CREATE INDEX IF NOT EXISTS idx_images_property ON property_images(property_id);
     CREATE INDEX IF NOT EXISTS idx_enquiries_property ON enquiries(property_id);
+    -- A single-row marker: once the database has been seeded with demo data
+    -- one time, this record's presence means "never auto-seed again" —
+    -- regardless of how many rows exist later. This is what stops deleted
+    -- demo properties/agents from silently reappearing after a restart.
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_inspections_property ON inspections(property_id);
   `);
+
+  // --- Safe migrations ---
+  // CREATE TABLE IF NOT EXISTS above does nothing on a database that already
+  // has these tables (like the live production database) — it never adds
+  // NEW columns to an existing table. So any column added after the first
+  // release needs to be added here explicitly, checked first so this never
+  // errors out on a fresh database that already has it from the CREATE TABLE
+  // statement above. This only ever adds columns, never removes or renames
+  // anything — existing data is untouched.
+  const existingColumns = await db.prepare(`PRAGMA table_info(properties)`).all();
+  const columnNames = existingColumns.map((c) => c.name);
+  if (!columnNames.includes('structure_type')) {
+    await db.exec(`ALTER TABLE properties ADD COLUMN structure_type TEXT`);
+  }
 }
 
 module.exports = createSchema;

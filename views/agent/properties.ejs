@@ -5,24 +5,54 @@
 <div class="table-wrap">
   <div class="table-scroll">
     <table>
-      <thead><tr><th>ID</th><th>Title</th><th>Type</th><th>Price</th><th>Approval</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody id="propRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+      <thead>
+        <tr>
+          <th class="sortable" onclick="sortCtl.setSort('id')" id="th-id">ID</th>
+          <th>Title</th>
+          <th class="sortable" onclick="sortCtl.setSort('type')" id="th-type">Type</th>
+          <th>Price</th>
+          <th class="sortable" onclick="sortCtl.setSort('approval_status')" id="th-approval_status">Approval</th>
+          <th class="sortable" onclick="sortCtl.setSort('created_at')" id="th-created_at">Listed</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="propRows"><tr><td colspan="8">Loading…</td></tr></tbody>
     </table>
   </div>
 </div>
 <script>
+let allMyProperties = [];
+let sortState, sortCtl;
+
+document.addEventListener('DOMContentLoaded', () => {
+  sortState = { field: null, dir: 'asc' };
+  sortCtl = makeSortable(sortState, renderMyProperties);
+  loadMyProperties();
+});
+
 async function loadMyProperties() {
   const res = await fetch('/api/agent/properties');
   const data = await res.json();
+  allMyProperties = data.results;
+  renderMyProperties();
+}
+
+function renderMyProperties() {
+  ['id','type','approval_status','created_at'].forEach(f => {
+    document.getElementById(`th-${f}`).textContent = sortCtl.headerLabel(f, {id:'ID',type:'Type',approval_status:'Approval',created_at:'Listed'}[f]);
+  });
   const tbody = document.getElementById('propRows');
-  if (!data.results.length) { tbody.innerHTML = '<tr><td colspan="7">No properties yet.</td></tr>'; return; }
-  tbody.innerHTML = data.results.map(p => `
+  if (!allMyProperties.length) { tbody.innerHTML = '<tr><td colspan="8">No properties yet.</td></tr>'; return; }
+  const rows = sortCtl.sortRows(allMyProperties);
+  tbody.innerHTML = rows.map(p => `
     <tr>
       <td><strong>${p.id}</strong></td>
       <td>${p.title}</td>
       <td>${p.type}</td>
       <td>${nairaFmt(p.price)}</td>
       <td>${statusPill(p.approval_status)}</td>
+      <td>${new Date(p.created_at).toLocaleDateString()}</td>
       <td>
         <select onchange="updateStatus('${p.id}', this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--ink-300);">
           ${['Available','Reserved','Rented','Unavailable'].map(s => `<option value="${s}" ${s===p.status?'selected':''}>${s}</option>`).join('')}
@@ -36,5 +66,4 @@ async function updateStatus(id, status) {
   await fetch(`/api/agent/properties/${id}/status`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status}) });
   loadMyProperties();
 }
-loadMyProperties();
 </script>

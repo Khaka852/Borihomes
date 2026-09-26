@@ -83,7 +83,7 @@ npm start                  # starts the server
 Visit **http://localhost:3000**
 
 ### Available scripts
-- `npm start` — run the server (also auto-creates the database and demo data on first run if it doesn't exist yet — safe to run repeatedly, it will never overwrite real data)
+- `npm start` — run the server. On the database's very first-ever boot, this auto-creates the schema and demo data. Every boot after that — including every redeploy, and even if an admin has since deleted every demo property/agent on purpose — leaves existing data alone. This is tracked by a permanent marker in the database itself, not by checking whether tables currently look empty, so deleting demo content is safe and permanent.
 - `npm run seed` — wipe and reseed the database with fresh demo data (local dev only — do NOT run this against a live production database with real listings, it deletes everything first)
 
 ## 5. Environment Variables

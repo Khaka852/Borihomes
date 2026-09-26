@@ -11,6 +11,7 @@ function toPublicProperty(row, images) {
   return {
     id: row.property_id,
     type: row.type,
+    structure_type: row.structure_type || null,
     title: row.title,
     price: row.price,
     location_area: row.location_area,

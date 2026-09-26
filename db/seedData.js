@@ -21,6 +21,38 @@ async function ensureAdminFromEnv() {
   }
 }
 
+async function hasSeededBefore() {
+  const row = await db.prepare(`SELECT value FROM app_meta WHERE key = 'seeded_at'`).get();
+  return Boolean(row);
+}
+
+// Catches databases that were already in use BEFORE the app_meta marker
+// existed (or ended up in a half-cleaned state — e.g. some demo properties
+// deleted but a demo agent login left behind). Without this, the first boot
+// after this fix goes live would still try to insert the demo agents/
+// properties one more time, collide with whatever's already there, and
+// crash with the exact same "UNIQUE constraint failed" error this fix is
+// meant to prevent.
+async function hasAnyExistingData() {
+  const counts = await Promise.all([
+    db.prepare('SELECT COUNT(*) as c FROM users').get(),
+    db.prepare('SELECT COUNT(*) as c FROM properties').get(),
+    db.prepare('SELECT COUNT(*) as c FROM agents').get(),
+    db.prepare('SELECT COUNT(*) as c FROM landlords').get(),
+  ]);
+  // A count of 1 for users is expected (just the admin, synced above) —
+  // anything beyond that, or any row at all in the other tables, means this
+  // database has been used before in some form and must not be touched.
+  return counts[0].c > 1 || counts[1].c > 0 || counts[2].c > 0 || counts[3].c > 0;
+}
+
+async function markSeeded() {
+  await db.prepare(`
+    INSERT INTO app_meta (key, value) VALUES ('seeded_at', datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run();
+}
+
 async function seedDatabase({ force = false } = {}) {
   await createSchema();
 
@@ -31,10 +63,14 @@ async function seedDatabase({ force = false } = {}) {
   // environment variables (.env locally, or the hosting platform's dashboard).
   await ensureAdminFromEnv();
 
-  const propertyCount = (await db.prepare('SELECT COUNT(*) as c FROM properties').get()).c;
-  if (propertyCount > 0 && !force) {
-    // Database already has real data (e.g. on a redeploy) — never overwrite it silently.
-    console.log('Database already has data — skipping seed.');
+  const alreadySeeded = (await hasSeededBefore()) || (await hasAnyExistingData());
+  if (alreadySeeded && !force) {
+    // This database has been seeded before — even if an admin has since
+    // deleted every demo property/agent on purpose, we must NEVER silently
+    // recreate them just because the tables look empty right now. Only an
+    // explicit `npm run seed` (force: true) is allowed to repopulate demo data.
+    await markSeeded(); // retroactively set the marker so future boots skip the row-count checks entirely
+    console.log('Database already initialised — skipping demo data (this is expected on every normal restart/redeploy).');
     return;
   }
 
@@ -88,13 +124,32 @@ async function seedDatabase({ force = false } = {}) {
   ];
   const agentIds = [];
   for (const a of agentUsers) {
-    const userResult = await insertUser.run(a.name, a.email, a.phone, passAgent, 'agent');
-    const agentResult = await insertAgent.run(
-      userResult.lastInsertRowid,
-      `Local BoriHomes agent covering properties near Kenpoly and central Bori.`,
-      `https://i.pravatar.cc/150?u=${a.email}`
-    );
-    agentIds.push(agentResult.lastInsertRowid);
+    // Idempotent by design: if this demo agent already exists (e.g. a
+    // previous seed attempt got interrupted partway through), reuse it
+    // instead of crashing on a duplicate email — this is exactly what makes
+    // the app self-heal from a partial/interrupted first seed.
+    let userRow = await db.prepare('SELECT id FROM users WHERE email = ?').get(a.email);
+    let userId;
+    if (userRow) {
+      userId = userRow.id;
+    } else {
+      const userResult = await insertUser.run(a.name, a.email, a.phone, passAgent, 'agent');
+      userId = userResult.lastInsertRowid;
+    }
+
+    let agentRow = await db.prepare('SELECT id FROM agents WHERE user_id = ?').get(userId);
+    let agentId;
+    if (agentRow) {
+      agentId = agentRow.id;
+    } else {
+      const agentResult = await insertAgent.run(
+        userId,
+        `Local BoriHomes agent covering properties near Kenpoly and central Bori.`,
+        `https://i.pravatar.cc/150?u=${a.email}`
+      );
+      agentId = agentResult.lastInsertRowid;
+    }
+    agentIds.push(agentId);
   }
 
   // --- Landlords (demo, private) ---
@@ -108,6 +163,13 @@ async function seedDatabase({ force = false } = {}) {
   ];
   const landlordIds = [];
   for (const [name, phone, email] of landlordNames) {
+    // Same self-healing approach as agents above — avoids piling up duplicate
+    // demo landlords if the seed process gets interrupted and retried.
+    let existing = await db.prepare('SELECT id FROM landlords WHERE name = ? AND phone = ?').get(name, phone);
+    if (existing) {
+      landlordIds.push(existing.id);
+      continue;
+    }
     const result = await insertLandlord.run(
       name, phone, email,
       `${name.split(' ').pop()} Family House, off main road, Bori (exact address withheld)`,
@@ -155,38 +217,56 @@ async function seedDatabase({ force = false } = {}) {
     const approval = status === 'Pending Approval' ? 'pending' : 'approved';
     const rating = Math.round((3.5 + Math.random() * 1.5) * 10) / 10;
 
-    const row = await insertProperty.run({
-      property_id: propertyId,
-      type: p.type,
-      title: p.title,
-      price: p.price,
-      location_area: p.area,
-      bedrooms: p.bed,
-      bathrooms: p.bath,
-      description: `${p.title}. A well-maintained ${p.type.toLowerCase()} located ${p.area}, suitable for students and residents in Bori. Contact the assigned agent to book an inspection.`,
-      amenities: JSON.stringify(pick(amenitiesPool, 4 + Math.floor(Math.random() * 3))),
-      rating,
-      status,
-      approval_status: approval,
-      agent_id: agentId,
-      landlord_id: landlordId,
-    });
+    // Self-healing: if this exact property already exists (from a previous
+    // interrupted seed attempt), don't try to recreate it — that would hit
+    // the same UNIQUE constraint that caused the original crash. Only fill
+    // in whatever pieces (private data, images) are genuinely still missing.
+    const existingProperty = await db.prepare('SELECT id FROM properties WHERE property_id = ?').get(propertyId);
+    let propRowId;
 
-    const propRowId = row.lastInsertRowid;
-
-    await insertPrivate.run(
-      propRowId,
-      `Plot ${10 + idx}, off ${p.area} internal road, Bori, Rivers State (exact address — agent access only)`,
-      `DEMO internal note: verify tenant references before handover. Landlord prefers ${idx % 2 === 0 ? 'annual' : 'bi-annual'} payment.`,
-      'DEMO verification: landlord ID and C-of-O on file with admin.',
-      `${Math.round(p.price * 0.1).toLocaleString()} NGN commission (10%) — internal only`
-    );
-
-    for (let i = 0; i < imageTypes.length; i++) {
-      await insertImage.run(propRowId, `https://picsum.photos/seed/${propertyId}-${imageTypes[i]}/900/600`, imageTypes[i], i);
+    if (existingProperty) {
+      propRowId = existingProperty.id;
+    } else {
+      const row = await insertProperty.run({
+        property_id: propertyId,
+        type: p.type,
+        title: p.title,
+        price: p.price,
+        location_area: p.area,
+        bedrooms: p.bed,
+        bathrooms: p.bath,
+        description: `${p.title}. A well-maintained ${p.type.toLowerCase()} located ${p.area}, suitable for students and residents in Bori. Contact the assigned agent to book an inspection.`,
+        amenities: JSON.stringify(pick(amenitiesPool, 4 + Math.floor(Math.random() * 3))),
+        rating,
+        status,
+        approval_status: approval,
+        agent_id: agentId,
+        landlord_id: landlordId,
+      });
+      propRowId = row.lastInsertRowid;
     }
-    await insertImage.run(propRowId, `https://picsum.photos/seed/${propertyId}-extra/900/600`, 'other', 5);
+
+    const existingPrivate = await db.prepare('SELECT property_id FROM property_private WHERE property_id = ?').get(propRowId);
+    if (!existingPrivate) {
+      await insertPrivate.run(
+        propRowId,
+        `Plot ${10 + idx}, off ${p.area} internal road, Bori, Rivers State (exact address — agent access only)`,
+        `DEMO internal note: verify tenant references before handover. Landlord prefers ${idx % 2 === 0 ? 'annual' : 'bi-annual'} payment.`,
+        'DEMO verification: landlord ID and C-of-O on file with admin.',
+        `${Math.round(p.price * 0.1).toLocaleString()} NGN commission (10%) — internal only`
+      );
+    }
+
+    const existingImages = await db.prepare('SELECT COUNT(*) as c FROM property_images WHERE property_id = ?').get(propRowId);
+    if (existingImages.c === 0) {
+      for (let i = 0; i < imageTypes.length; i++) {
+        await insertImage.run(propRowId, `https://picsum.photos/seed/${propertyId}-${imageTypes[i]}/900/600`, imageTypes[i], i);
+      }
+      await insertImage.run(propRowId, `https://picsum.photos/seed/${propertyId}-extra/900/600`, 'other', 5);
+    }
   }
+
+  await markSeeded();
 
   console.log('Seed complete:');
   console.log(` Admin login   -> using ADMIN_EMAIL / ADMIN_PASSWORD (or the demo fallback if unset)`);
