@@ -26,6 +26,26 @@ async function hasSeededBefore() {
   return Boolean(row);
 }
 
+// Catches databases that were already in use BEFORE the app_meta marker
+// existed (or ended up in a half-cleaned state — e.g. some demo properties
+// deleted but a demo agent login left behind). Without this, the first boot
+// after this fix goes live would still try to insert the demo agents/
+// properties one more time, collide with whatever's already there, and
+// crash with the exact same "UNIQUE constraint failed" error this fix is
+// meant to prevent.
+async function hasAnyExistingData() {
+  const counts = await Promise.all([
+    db.prepare('SELECT COUNT(*) as c FROM users').get(),
+    db.prepare('SELECT COUNT(*) as c FROM properties').get(),
+    db.prepare('SELECT COUNT(*) as c FROM agents').get(),
+    db.prepare('SELECT COUNT(*) as c FROM landlords').get(),
+  ]);
+  // A count of 1 for users is expected (just the admin, synced above) —
+  // anything beyond that, or any row at all in the other tables, means this
+  // database has been used before in some form and must not be touched.
+  return counts[0].c > 1 || counts[1].c > 0 || counts[2].c > 0 || counts[3].c > 0;
+}
+
 async function markSeeded() {
   await db.prepare(`
     INSERT INTO app_meta (key, value) VALUES ('seeded_at', datetime('now'))
@@ -43,12 +63,13 @@ async function seedDatabase({ force = false } = {}) {
   // environment variables (.env locally, or the hosting platform's dashboard).
   await ensureAdminFromEnv();
 
-  const alreadySeeded = await hasSeededBefore();
+  const alreadySeeded = (await hasSeededBefore()) || (await hasAnyExistingData());
   if (alreadySeeded && !force) {
     // This database has been seeded before — even if an admin has since
     // deleted every demo property/agent on purpose, we must NEVER silently
     // recreate them just because the tables look empty right now. Only an
     // explicit `npm run seed` (force: true) is allowed to repopulate demo data.
+    await markSeeded(); // retroactively set the marker so future boots skip the row-count checks entirely
     console.log('Database already initialised — skipping demo data (this is expected on every normal restart/redeploy).');
     return;
   }
