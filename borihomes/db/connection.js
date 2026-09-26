@@ -10,13 +10,30 @@
 const { createClient } = require('@libsql/client');
 const path = require('path');
 
-const usingTurso = Boolean(process.env.TURSO_DATABASE_URL);
+const tursoUrl = (process.env.TURSO_DATABASE_URL || '').trim();
+const tursoToken = (process.env.TURSO_AUTH_TOKEN || '').trim();
+const usingTurso = Boolean(tursoUrl);
 
-const client = createClient(
-  usingTurso
-    ? { url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN }
-    : { url: `file:${path.join(__dirname, 'borihomes.sqlite')}` }
-);
+let client;
+try {
+  client = createClient(
+    usingTurso
+      ? { url: tursoUrl, authToken: tursoToken }
+      : { url: `file:${path.join(__dirname, 'borihomes.sqlite')}` }
+  );
+} catch (err) {
+  // A malformed TURSO_DATABASE_URL (e.g. accidentally blank or corrupted in
+  // the hosting platform's environment settings) would otherwise crash the
+  // entire process immediately at startup, before any of the app's own
+  // error handling ever runs. Fail loudly with a clear, specific message
+  // instead of a cryptic library error.
+  console.error('FATAL: could not set up the database connection.');
+  console.error(usingTurso
+    ? 'Check that TURSO_DATABASE_URL is set correctly (should start with libsql://) and TURSO_AUTH_TOKEN is present.'
+    : 'Local file-based database setup failed unexpectedly.');
+  console.error('Underlying error:', err.message);
+  throw err;
+}
 
 if (!usingTurso) {
   console.log('No TURSO_DATABASE_URL set — using a local database file (fine for local development, NOT for production).');

@@ -58,12 +58,39 @@ app.use((err, req, res, next) => {
 // is async — the schema/seed step must finish before the server starts
 // accepting requests, otherwise the very first visitors could hit a
 // database with no tables yet.
+//
+// A transient network hiccup talking to Turso (or any other momentary
+// issue) should NEVER take the whole site down. Previously, any error here
+// caused the entire process to exit — meaning a single brief connectivity
+// blip could crash the live site until Render happened to restart it again.
+// Now: retry a few times with a short delay, and if it still fails, start
+// the web server anyway (so the site stays reachable) rather than going
+// completely dark. Database-dependent pages will show a clear error until
+// the underlying issue is resolved, which is far better than the entire
+// site being unreachable.
 async function start() {
-  // On first boot (fresh database, e.g. right after deploying), this creates
-  // the tables and demo data automatically. If the database already has
-  // properties in it (a real site already in use), this does nothing —
-  // it will never overwrite real data.
-  await seedDatabase({ force: false });
+  const MAX_ATTEMPTS = 3;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await seedDatabase({ force: false });
+      lastError = null;
+      break;
+    } catch (err) {
+      lastError = err;
+      console.error(`Database setup failed (attempt ${attempt}/${MAX_ATTEMPTS}):`, err.message);
+      if (attempt < MAX_ATTEMPTS) {
+        const delayMs = 2000 * attempt;
+        console.log(`Retrying in ${delayMs / 1000}s...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  if (lastError) {
+    console.error('Database setup did not succeed after multiple attempts. Starting the web server anyway so the site stays reachable — check TURSO_DATABASE_URL / TURSO_AUTH_TOKEN and your Turso dashboard if this persists.');
+  }
 
   app.listen(PORT, () => {
     console.log(`BoriHomes running at http://localhost:${PORT}`);
@@ -71,6 +98,9 @@ async function start() {
 }
 
 start().catch((err) => {
-  console.error('Failed to start BoriHomes:', err);
+  // Should be unreachable now that start() itself no longer throws — kept
+  // only as a last-resort safety net so a truly unexpected error is at
+  // least logged clearly instead of failing silently.
+  console.error('Unexpected fatal startup error:', err);
   process.exit(1);
 });
