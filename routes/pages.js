@@ -102,7 +102,7 @@ ${urls.join('\n')}
 
 router.get('/login', (req, res) => {
   if (req.user) return res.redirect(req.user.role === 'admin' ? '/admin' : '/agent');
-  res.render('login', { title: 'Agent / Admin Login — BoriHomes', layout: false });
+  res.render('login', { title: 'Agent Login — BoriHomes', layout: false });
 });
 
 module.exports = router;

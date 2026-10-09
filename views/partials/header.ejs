@@ -13,7 +13,7 @@
       <% if (typeof currentUser !== 'undefined' && currentUser) { %>
         <a href="<%= currentUser.role === 'admin' ? '/admin' : '/agent' %>" class="btn btn-outline btn-sm">Dashboard</a>
       <% } else { %>
-        <a href="/login" class="btn btn-outline btn-sm">Agent / Admin Login</a>
+        <a href="/login" class="btn btn-outline btn-sm">Agent Login</a>
       <% } %>
       <a href="/properties" class="btn btn-primary btn-sm">Find a Home</a>
     </div>
@@ -29,7 +29,7 @@
     <% if (typeof currentUser !== 'undefined' && currentUser) { %>
       <a href="<%= currentUser.role === 'admin' ? '/admin' : '/agent' %>">Dashboard</a>
     <% } else { %>
-      <a href="/login">Agent / Admin Login</a>
+      <a href="/login">Agent Login</a>
     <% } %>
   </div>
 </header>

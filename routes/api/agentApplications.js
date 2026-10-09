@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const db = require('../../db/connection');
 const { publicFormLimiter } = require('../../middleware/rateLimiters');
+const { sendAdminNotification } = require('../../utils/email');
 
 router.post(
   '/',
@@ -28,6 +29,16 @@ router.post(
       applicationId: result.lastInsertRowid,
       message: 'Thanks for your interest! Our team will review your application and reach out.',
     });
+
+    // Fire-and-forget — doesn't delay the response to the applicant.
+    sendAdminNotification(
+      `New Agent Application — ${full_name}`,
+      `<p><strong>${full_name}</strong> applied to become an agent.</p>
+       <p>Phone: ${phone}${email ? `, Email: ${email}` : ''}</p>
+       <p>Area(s) covered: ${area_covered || 'Not specified'}</p>
+       <p>Experience: ${experience || 'Not specified'}</p>
+       <p>Review it in the admin dashboard's Agent Applications page.</p>`
+    );
   }
 );
 

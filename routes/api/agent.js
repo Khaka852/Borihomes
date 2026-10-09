@@ -5,6 +5,7 @@ const db = require('../../db/connection');
 const { requireApiRole } = require('../../middleware/auth');
 const { toPrivateProperty } = require('../../utils/propertySerializer');
 const { nextPropertyId } = require('../../utils/idGenerator');
+const { sendAdminNotification } = require('../../utils/email');
 
 router.use(requireApiRole('agent'));
 
@@ -65,6 +66,14 @@ router.post(
       .run(propResult.lastInsertRowid, full_address, internal_notes || null);
 
     res.status(201).json({ property_id: propertyId, status: 'Pending Approval' });
+
+    // Fire-and-forget — doesn't delay the response to the agent.
+    sendAdminNotification(
+      `New Property Listed — ${propertyId}`,
+      `<p><strong>${req.user.name}</strong> submitted a new property: <strong>${propertyId} — ${title}</strong>.</p>
+       <p>${type} in ${location_area}, ₦${Number(price).toLocaleString('en-NG')}/year.</p>
+       <p>Status: Pending Approval — review it in the admin dashboard.</p>`
+    );
   }
 );
 
