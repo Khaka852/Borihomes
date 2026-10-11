@@ -28,12 +28,20 @@ document.getElementById('applyForm').addEventListener('submit', async (e) => {
     const res = await fetch('/api/agent-applications', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || (result.errors && result.errors[0].msg) || 'Something went wrong.');
-    alertBox.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
     e.target.reset();
+    e.target.style.display = 'none';
+    alertBox.innerHTML = `<div class="alert alert-success">${result.message}</div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="showApplyFormAgain()">&larr; Back to form</button>`;
+    alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (err) {
     alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'Submit Application';
   }
 });
+
+function showApplyFormAgain() {
+  document.getElementById('applyAlert').innerHTML = '';
+  document.getElementById('applyForm').style.display = '';
+}
 </script>

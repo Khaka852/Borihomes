@@ -26,8 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (result.whatsapp && result.whatsapp.link) {
         html += `<a href="${result.whatsapp.link}" target="_blank" rel="noopener" class="btn btn-primary btn-block" style="background:#25D366;border-color:#25D366;margin-top:4px;">💬 Chat with ${result.whatsapp.agentName} on WhatsApp</a>`;
       }
-      alertBox.innerHTML = html;
-      e.target.reset();
+      showSubmitted(e.target, alertBox, html);
     } catch (err) {
       alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
     } finally {
@@ -52,8 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (result.whatsapp && result.whatsapp.link) {
         html += `<a href="${result.whatsapp.link}" target="_blank" rel="noopener" class="btn btn-primary btn-block" style="background:#25D366;border-color:#25D366;margin-top:4px;">💬 Chat with ${result.whatsapp.agentName} on WhatsApp</a>`;
       }
-      alertBox.innerHTML = html;
-      e.target.reset();
+      showSubmitted(e.target, alertBox, html);
     } catch (err) {
       alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
     } finally {
@@ -61,6 +59,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// After a successful submit: clear + hide the form, show the confirmation
+// (and agent WhatsApp button, if any) in its place, with a Back link that
+// brings back a fresh empty form.
+function showSubmitted(form, alertBox, html) {
+  form.reset();
+  form.style.display = 'none';
+  alertBox.innerHTML = html +
+    '<button type="button" class="btn btn-outline btn-sm btn-block" style="margin-top:8px;" data-back>&larr; Back to form</button>';
+  alertBox.querySelector('[data-back]').addEventListener('click', () => {
+    alertBox.innerHTML = '';
+    form.style.display = '';
+  });
+  alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }

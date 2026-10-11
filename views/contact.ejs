@@ -16,7 +16,16 @@
 <script>
   document.getElementById('contactForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    document.getElementById('contactAlert').innerHTML = '<div class="alert alert-success">Thanks for reaching out! This is a Version 1 demo, so general contact messages aren\'t stored yet — please use a property\'s "Contact Agent" button for real enquiries.</div>';
     e.target.reset();
+    e.target.style.display = 'none';
+    const contactAlert = document.getElementById('contactAlert');
+    contactAlert.innerHTML = '<div class="alert alert-success">Thanks for reaching out! This is a Version 1 demo, so general contact messages aren\'t stored yet — please use a property\'s "Contact Agent" button for real enquiries.</div>' +
+      '<button type="button" class="btn btn-outline btn-sm" onclick="showContactFormAgain()">&larr; Back to form</button>';
+    contactAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
+
+  function showContactFormAgain() {
+    document.getElementById('contactAlert').innerHTML = '';
+    document.getElementById('contactForm').style.display = '';
+  }
 </script>
