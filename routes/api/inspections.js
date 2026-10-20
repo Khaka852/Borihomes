@@ -5,6 +5,7 @@ const db = require('../../db/connection');
 const { publicFormLimiter } = require('../../middleware/rateLimiters');
 const { buildWhatsAppLink } = require('../../utils/whatsapp');
 const { sendAdminNotification } = require('../../utils/email');
+const { notifyNewInspection, escapeHtml } = require('../../utils/agentEmails');
 
 router.post(
   '/',
@@ -55,11 +56,14 @@ router.post(
 
     sendAdminNotification(
       `New Inspection Request — ${property.property_id}`,
-      `<p><strong>${name}</strong> (${phone}) requested an inspection for <strong>${property.property_id} — ${property.title}</strong>.</p>
-       <p>Preferred: ${preferred_date} at ${preferred_time}</p>
-       ${message ? `<p>Note: ${message}</p>` : ''}
-       <p>Assigned agent: ${whatsapp ? whatsapp.agentName : 'Unassigned'}</p>`
+      `<p><strong>${escapeHtml(name)}</strong> (${escapeHtml(phone)}) requested an inspection for <strong>${property.property_id} — ${escapeHtml(property.title)}</strong>.</p>
+       <p>Preferred: ${escapeHtml(preferred_date)} at ${escapeHtml(preferred_time)}</p>
+       ${message ? `<p>Note: ${escapeHtml(message)}</p>` : ''}
+       <p>Assigned agent: ${whatsapp ? escapeHtml(whatsapp.agentName) : 'Unassigned'}</p>`
     );
+
+    // Instant email to the assigned agent only (stays off until a sending domain is verified).
+    notifyNewInspection(property.property_id, { name, phone, preferredDate: preferred_date, preferredTime: preferred_time, message });
   }
 );
 

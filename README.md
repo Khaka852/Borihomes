@@ -267,3 +267,30 @@ Click **Create Web Service**. Render will install everything and start your site
 - The free instance "sleeps" after 15 minutes of no visitors, and takes ~30-50 seconds to wake back up on the next visit. This is normal on the free tier — upgrading later removes it.
 - The demo data (15 sample properties, admin/agent logins) will be created automatically the first time it starts, the same way it works locally.
 - **Important:** the free tier's storage isn't permanent — if Render redeploys or restarts your service in certain situations (like pushing new code changes), the database can reset back to the demo data. This is fine while you're testing, but before relying on this for real listings long-term, ask me about adding a persistent disk (Render supports this on paid plans) or migrating to a proper hosted database — I can walk you through either when you're ready for that step.
+
+## 17. Agent Emails & Weekly Digest (off until your domain is verified)
+
+Agents can be emailed automatically:
+
+| When | Who gets it |
+|---|---|
+| Their listing is approved (first time only) | the agent who submitted it |
+| An enquiry arrives on their property | **only** the agent assigned to that property |
+| An inspection is requested on their property | **only** the agent assigned to that property |
+| Weekly digest | every agent — public listing facts and counts only, never customer details |
+
+**Privacy rule:** customer names, phones, emails and messages are only ever emailed to the one assigned agent. The weekly digest contains no customer details.
+
+**Why it's off:** Resend only lets an account without a verified domain email its own owner. Nothing is sent to agents until all of these are set on Render:
+
+| Variable | Value |
+|---|---|
+| `AGENT_EMAILS_ENABLED` | `true` |
+| `RESEND_API_KEY` | your Resend key (already set) |
+| `RESEND_FROM_ADDRESS` | an address on your verified domain, e.g. `BoriHomes <notifications@yourdomain.com>` |
+
+If any is missing, agent emails are skipped (a one-line note appears in the logs) and everything else works as normal. Emails go to the address on each agent's account, so enter real emails when adding agents.
+
+**Weekly digest:** `POST /api/internal/weekly-digest` with header `Authorization: Bearer <DIGEST_SECRET>`. Set `DIGEST_SECRET` on Render to enable it (without it the endpoint doesn't exist). Render's free plan sleeps, so the site can't schedule itself — call that URL once a week from an outside scheduler. It won't send twice within 6 days unless you add `?force=1`, and it sends nothing in a week with no activity.
+
+**Agent applications:** the "Become an Agent" form now requires an email address.

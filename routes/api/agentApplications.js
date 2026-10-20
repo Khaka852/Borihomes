@@ -4,6 +4,7 @@ const { body, validationResult } = require('express-validator');
 const db = require('../../db/connection');
 const { publicFormLimiter } = require('../../middleware/rateLimiters');
 const { sendAdminNotification } = require('../../utils/email');
+const { escapeHtml } = require('../../utils/agentEmails');
 
 router.post(
   '/',
@@ -11,7 +12,7 @@ router.post(
   [
     body('full_name').trim().notEmpty().withMessage('Full name is required.'),
     body('phone').trim().isLength({ min: 7 }).withMessage('A valid phone number is required.'),
-    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email looks invalid.'),
+    body('email').trim().isEmail().withMessage('A valid email address is required.'),
     body('area_covered').optional({ checkFalsy: true }).trim(),
     body('experience').optional({ checkFalsy: true }).trim(),
   ],
@@ -33,10 +34,10 @@ router.post(
     // Fire-and-forget — doesn't delay the response to the applicant.
     sendAdminNotification(
       `New Agent Application — ${full_name}`,
-      `<p><strong>${full_name}</strong> applied to become an agent.</p>
-       <p>Phone: ${phone}${email ? `, Email: ${email}` : ''}</p>
-       <p>Area(s) covered: ${area_covered || 'Not specified'}</p>
-       <p>Experience: ${experience || 'Not specified'}</p>
+      `<p><strong>${escapeHtml(full_name)}</strong> applied to become an agent.</p>
+       <p>Phone: ${escapeHtml(phone)}${email ? `, Email: ${escapeHtml(email)}` : ''}</p>
+       <p>Area(s) covered: ${escapeHtml(area_covered || 'Not specified')}</p>
+       <p>Experience: ${escapeHtml(experience || 'Not specified')}</p>
        <p>Review it in the admin dashboard's Agent Applications page.</p>`
     );
   }

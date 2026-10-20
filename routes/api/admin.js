@@ -5,6 +5,7 @@ const db = require('../../db/connection');
 const { requireApiRole } = require('../../middleware/auth');
 const { toPrivateProperty } = require('../../utils/propertySerializer');
 const { nextPropertyId } = require('../../utils/idGenerator');
+const { notifyListingApproved } = require('../../utils/agentEmails');
 
 router.use(requireApiRole('admin'));
 
@@ -126,6 +127,9 @@ router.put('/properties/:id/approve', async (req, res) => {
 
   await db.prepare(`UPDATE properties SET approval_status='approved', status='Available'${ratingClause} WHERE id = ?`).run(...params);
   res.json({ ok: true });
+
+  // Tell the agent their listing is live — only the first time it's approved.
+  if (row.approval_status !== 'approved') notifyListingApproved(row.property_id);
 });
 
 // Lets admin correct a rating any time after approval too, not just at the moment of approving.
