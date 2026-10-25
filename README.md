@@ -294,3 +294,13 @@ If any is missing, agent emails are skipped (a one-line note appears in the logs
 **Weekly digest:** `POST /api/internal/weekly-digest` with header `Authorization: Bearer <DIGEST_SECRET>`. Set `DIGEST_SECRET` on Render to enable it (without it the endpoint doesn't exist). Render's free plan sleeps, so the site can't schedule itself — call that URL once a week from an outside scheduler. It won't send twice within 6 days unless you add `?force=1`, and it sends nothing in a week with no activity.
 
 **Agent applications:** the "Become an Agent" form now requires an email address.
+
+## 18. Agent Fee & Extra Move-in Fees (shown openly to renters)
+
+Every listing shows what moving in really costs, so nothing looks hidden:
+
+- **Cards (home + search):** the yearly rent, with a small line under it — `+ 10% agent fee`, or `+ 10% agent fee + other fees` when the property has extra fees.
+- **Property page:** a breakdown — rent, the agent fee, each extra fee, and a **Total to move in**.
+- **Agent fee percentage:** set by the `AGENT_FEE_PERCENT` setting on Render (default `10`; `0` hides the agent-fee line). It is worked out on the yearly rent only, not on the extra fees. Change it there — no code needed.
+- **Extra fees:** optional. Agents add them in "Add Property" — pick Caution / Drink / Agreement / Legal or type their own name, plus an amount (up to 8 per property). They are stored in a new optional `extra_fees` column that is added automatically on the next start; existing properties just show none.
+- The search **budget filter** still works on the rent amount only.

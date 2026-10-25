@@ -30,6 +30,13 @@
   <div class="form-group"><label>Description</label><textarea class="form-control" name="description" required></textarea></div>
   <div class="form-group"><label>Amenities (comma separated)</label><input class="form-control" name="amenities" placeholder="Water Supply, Prepaid Meter, Fenced Compound" /></div>
 
+  <div class="form-group">
+    <label>Extra move-in fees (optional)</label>
+    <p style="color:var(--ink-500);font-size:.8rem;margin:-2px 0 8px;">Renters see these on the property page next to the rent and the agent fee, so nothing looks hidden. Don't add the agent fee here — it's added automatically.</p>
+    <div id="feeRows"></div>
+    <button type="button" class="btn btn-outline btn-sm" id="addFeeBtn">+ Add a fee</button>
+  </div>
+
   <hr style="margin:24px 0;border-color:var(--ink-100);" />
   <h3 style="font-size:1rem;">Photos</h3>
   <% if (photosEnabled) { %>
@@ -76,6 +83,44 @@ window.CLOUDINARY_CONFIG = {
 </script>
 <script src="/js/agent-photo-upload.js"></script>
 <script>
+// Extra move-in fees: add/remove rows, and collect them for submit.
+function addFeeRow() {
+  const wrap = document.getElementById('feeRows');
+  if (wrap.children.length >= 8) return;
+  const row = document.createElement('div');
+  row.className = 'fee-row';
+  row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;';
+  row.innerHTML =
+    '<select class="form-control fee-name-select" style="flex:1 1 140px;">' +
+      '<option>Caution fee</option><option>Drink fee</option><option>Agreement fee</option><option>Legal fee</option><option value="__other">Other…</option>' +
+    '</select>' +
+    '<input class="form-control fee-name-other" placeholder="Fee name" maxlength="40" style="flex:1 1 140px;display:none;" />' +
+    '<input class="form-control fee-amount" type="number" min="1" step="1" placeholder="Amount (₦)" style="flex:1 1 120px;" />' +
+    '<button type="button" class="btn btn-outline btn-sm fee-remove" aria-label="Remove fee">&times;</button>';
+  row.querySelector('.fee-name-select').addEventListener('change', (ev) => {
+    row.querySelector('.fee-name-other').style.display = ev.target.value === '__other' ? 'block' : 'none';
+  });
+  row.querySelector('.fee-remove').addEventListener('click', () => row.remove());
+  wrap.appendChild(row);
+}
+function clearFeeRows() { document.getElementById('feeRows').innerHTML = ''; }
+// Returns [{ name, amount }]. Any row missing a name or an amount throws, so a fee is never silently dropped.
+function collectExtraFees() {
+  const fees = [];
+  document.querySelectorAll('#feeRows .fee-row').forEach((row) => {
+    const picked = row.querySelector('.fee-name-select').value;
+    const name = picked === '__other' ? row.querySelector('.fee-name-other').value.trim() : picked;
+    const amountText = row.querySelector('.fee-amount').value.trim();
+    if (!name || !amountText || Number(amountText) < 1) {
+      throw new Error('Each extra fee needs a name and an amount above zero — or remove that row.');
+    }
+    fees.push({ name, amount: Number(amountText) });
+  });
+  return fees;
+}
+document.getElementById('addFeeBtn').addEventListener('click', addFeeRow);
+</script>
+<script>
 const locationSelect = document.getElementById('locationSelect');
 const locationOtherInput = document.getElementById('locationOtherInput');
 locationSelect.addEventListener('change', () => {
@@ -97,6 +142,8 @@ document.getElementById('addPropertyForm').addEventListener('submit', async (e) 
   submitBtn.disabled = true;
 
   try {
+    data.extra_fees = collectExtraFees();
+
     // Step 1: create the property record itself.
     submitBtn.textContent = 'Saving property details…';
     const res = await fetch('/api/agent/properties', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
@@ -123,6 +170,7 @@ document.getElementById('addPropertyForm').addEventListener('submit', async (e) 
     e.target.reset();
     locationOtherInput.style.display = 'none';
     resetPhotoSlots();
+    clearFeeRows();
   } catch (err) {
     alertBox.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
   } finally {

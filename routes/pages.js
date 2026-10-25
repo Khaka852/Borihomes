@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/connection');
 const { toPublicProperty } = require('../utils/propertySerializer');
 const { KNOWN_AREAS } = require('../utils/locations');
+const { computeFees, agentFeePercent } = require('../utils/fees');
 
 async function getPublicFeatured(limit = 6) {
   const rows = await db.prepare(`
@@ -59,6 +60,7 @@ router.get('/properties/:id', async (req, res) => {
     description: `${property.type} for rent in ${property.location_area}, Bori, Rivers State — ₦${Number(property.price).toLocaleString('en-NG')}/year. ${property.bedrooms} bedroom(s), ${property.bathrooms} bathroom(s). Property ID: ${property.id}.`,
     ogImage: property.images[0] ? property.images[0].url : undefined,
     property,
+    fees: computeFees(property.price, property.extra_fees, property.agent_fee_percent),
     previewNotice: row.approval_status !== 'approved' ? row.approval_status : null,
   });
 });
@@ -70,6 +72,7 @@ router.get('/about', (req, res) => res.render('about', {
 router.get('/how-it-works', (req, res) => res.render('how-it-works', {
   title: 'How It Works — BoriHomes',
   description: 'Search, explore, contact an agent, and book an inspection — here is how to find your next home in Bori with BoriHomes in four simple steps.',
+  agentFeePercent: agentFeePercent(),
 }));
 router.get('/contact', (req, res) => res.render('contact', {
   title: 'Contact BoriHomes',

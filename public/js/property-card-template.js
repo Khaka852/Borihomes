@@ -21,7 +21,10 @@ function propertyCardHTML(p) {
           <span>${p.bathrooms} Bath</span>
         </div>
         <div class="property-foot">
-          <div class="property-price">${formatNaira(p.price)} <small>/ year</small></div>
+          <div>
+            <div class="property-price">${formatNaira(p.price)} <small>/ year</small></div>
+            ${p.fee_note ? `<div style="font-size:.75rem;color:var(--ink-500);">${escapeHtml(p.fee_note)}</div>` : ''}
+          </div>
           <div class="rating">★ ${p.rating}</div>
         </div>
       </div>

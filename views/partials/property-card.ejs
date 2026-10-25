@@ -24,7 +24,10 @@
         <span><%= property.bathrooms %> Bath</span>
       </div>
       <div class="property-foot">
-        <div class="property-price"><%= '₦' + Number(property.price).toLocaleString('en-NG') %> <small>/ year</small></div>
+        <div>
+          <div class="property-price"><%= '₦' + Number(property.price).toLocaleString('en-NG') %> <small>/ year</small></div>
+          <% if (property.fee_note) { %><div style="font-size:.75rem;color:var(--ink-500);"><%= property.fee_note %></div><% } %>
+        </div>
         <div class="rating">★ <%= property.rating %></div>
       </div>
     </div>

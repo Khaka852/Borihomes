@@ -57,6 +57,17 @@
         <div class="sticky-card">
           <div class="property-price" style="font-size:1.5rem;margin-bottom:4px;"><%= '₦' + Number(property.price).toLocaleString('en-NG') %> <small style="font-size:.85rem;">/ year</small></div>
           <p style="font-size:.85rem;color:var(--ink-500);margin-bottom:18px;">Property ID: <strong><%= property.id %></strong></p>
+          <% const money = (n) => '₦' + Number(n).toLocaleString('en-NG'); %>
+          <div style="border-top:1px solid var(--ink-100);padding-top:12px;margin-bottom:16px;font-size:.9rem;">
+            <div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;"><span>Rent (per year)</span> <span><%= money(fees.rent) %></span></div>
+            <% if (fees.percent > 0) { %>
+              <div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;"><span>Agent fee (<%= fees.percent %>% of rent)</span> <span><%= money(fees.agentFee) %></span></div>
+            <% } %>
+            <% fees.extraFees.forEach((f) => { %>
+              <div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;"><span><%= f.name %></span> <span><%= money(f.amount) %></span></div>
+            <% }) %>
+            <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0 0;margin-top:6px;border-top:1px solid var(--ink-100);font-weight:700;"><span>Total to move in</span> <span><%= money(fees.total) %></span></div>
+          </div>
           <button class="btn btn-primary btn-block" style="margin-bottom:10px;" onclick="openModal('enquiryModal')">Contact Agent</button>
           <button class="btn btn-outline btn-block" onclick="openModal('inspectionModal')">Request Inspection</button>
         </div>

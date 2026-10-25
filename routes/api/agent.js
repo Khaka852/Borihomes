@@ -7,6 +7,7 @@ const { toPrivateProperty } = require('../../utils/propertySerializer');
 const { nextPropertyId } = require('../../utils/idGenerator');
 const { sendAdminNotification } = require('../../utils/email');
 const { escapeHtml } = require('../../utils/agentEmails');
+const { sanitizeExtraFees } = require('../../utils/fees');
 
 router.use(requireApiRole('agent'));
 
@@ -43,6 +44,10 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
+    // Check the optional extra fees before saving anything.
+    const feeCheck = sanitizeExtraFees(req.body.extra_fees);
+    if (!feeCheck.ok) return res.status(400).json({ error: feeCheck.error });
+
     const {
       type, title, price, location_area, bedrooms, bathrooms, description, amenities,
       full_address, internal_notes, landlord_name, landlord_phone, landlord_email,
@@ -55,12 +60,13 @@ router.post(
     const propertyId = await nextPropertyId();
 
     const propResult = await db.prepare(`
-      INSERT INTO properties (property_id, type, title, price, location_area, bedrooms, bathrooms, description, amenities, status, approval_status, agent_id, landlord_id)
-      VALUES (?,?,?,?,?,?,?,?,?, 'Pending Approval', 'pending', ?, ?)
+      INSERT INTO properties (property_id, type, title, price, location_area, bedrooms, bathrooms, description, amenities, status, approval_status, agent_id, landlord_id, extra_fees)
+      VALUES (?,?,?,?,?,?,?,?,?, 'Pending Approval', 'pending', ?, ?, ?)
     `).run(
       propertyId, type, title, price, location_area, bedrooms, bathrooms, description,
       JSON.stringify(Array.isArray(amenities) ? amenities : (amenities ? [amenities] : [])),
-      req.user.agentId, landlordResult.lastInsertRowid
+      req.user.agentId, landlordResult.lastInsertRowid,
+      feeCheck.fees.length ? JSON.stringify(feeCheck.fees) : null
     );
 
     await db.prepare('INSERT INTO property_private (property_id, full_address, internal_notes) VALUES (?,?,?)')

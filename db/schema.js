@@ -147,6 +147,11 @@ async function createSchema() {
   if (!columnNames.includes('structure_type')) {
     await db.exec(`ALTER TABLE properties ADD COLUMN structure_type TEXT`);
   }
+  // Optional extra move-in fees (caution, drink, ...) as a small JSON list.
+  // Existing properties simply have none.
+  if (!columnNames.includes('extra_fees')) {
+    await db.exec(`ALTER TABLE properties ADD COLUMN extra_fees TEXT`);
+  }
 }
 
 module.exports = createSchema;

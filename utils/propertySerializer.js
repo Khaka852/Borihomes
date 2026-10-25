@@ -7,6 +7,8 @@
 // only does for authenticated admin/authorised-agent requests).
 // -----------------------------------------------------------------------
 
+const { agentFeePercent, parseExtraFees, feeNote } = require('./fees');
+
 function toPublicProperty(row, images) {
   return {
     id: row.property_id,
@@ -22,6 +24,10 @@ function toPublicProperty(row, images) {
     rating: row.rating,
     status: row.status,
     images: images || [],
+    // Fees are shown openly to renters so nothing looks hidden.
+    extra_fees: parseExtraFees(row.extra_fees),
+    agent_fee_percent: agentFeePercent(),
+    fee_note: feeNote(agentFeePercent(), parseExtraFees(row.extra_fees)),
   };
 }
 
