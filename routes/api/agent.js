@@ -8,19 +8,32 @@ const { nextPropertyId } = require('../../utils/idGenerator');
 const { sendAdminNotification } = require('../../utils/email');
 const { escapeHtml } = require('../../utils/agentEmails');
 const { sanitizeExtraFees } = require('../../utils/fees');
+const { describeChanges, parseChanges } = require('../../utils/propertyEdits');
 
 router.use(requireApiRole('agent'));
+
+// Requests to change a listing (these wait for admin approval).
+router.use('/properties/:id/edits', require('./agentEdits'));
 
 // List properties assigned to this agent (with private data — agent is authorised for their own listings)
 router.get('/properties', async (req, res) => {
   const rows = await db.prepare('SELECT * FROM properties WHERE agent_id = ? ORDER BY created_at DESC').all(req.user.agentId);
+  const waiting = await db.prepare(`SELECT id, property_id, changes, created_at FROM property_edits WHERE agent_id = ? AND status = 'pending'`).all(req.user.agentId);
+  const waitingByProperty = {};
+  waiting.forEach((w) => { waitingByProperty[w.property_id] = w; });
   const results = [];
   for (const r of rows) {
     const imageRows = await db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(r.id);
     const images = imageRows.map((i) => ({ url: i.image_url, type: i.image_type }));
     const priv = await db.prepare('SELECT * FROM property_private WHERE property_id = ?').get(r.id);
     const landlord = r.landlord_id ? await db.prepare('SELECT * FROM landlords WHERE id = ?').get(r.landlord_id) : null;
-    results.push(toPrivateProperty(r, images, priv, req.user.name, landlord));
+    const item = toPrivateProperty(r, images, priv, req.user.name, landlord);
+    const w = waitingByProperty[r.id];
+    // A change request still waiting for the admin (null when there isn't one).
+    item.pending_edit = w
+      ? { id: w.id, created_at: w.created_at, changes: describeChanges(r, parseChanges(w.changes)), raw: parseChanges(w.changes) }
+      : null;
+    results.push(item);
   }
   res.json({ count: results.length, results });
 });
@@ -84,44 +97,16 @@ router.post(
   }
 );
 
-// Edit a property (only if owned by this agent)
-router.put('/properties/:id', async (req, res) => {
-  const row = await db.prepare('SELECT * FROM properties WHERE property_id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Not found.' });
-  if (row.agent_id !== req.user.agentId) return res.status(403).json({ error: 'Not your property.' });
-
-  const fields = ['type', 'title', 'price', 'location_area', 'bedrooms', 'bathrooms', 'description'];
-  const updates = [];
-  const params = [];
-  fields.forEach((f) => {
-    if (req.body[f] !== undefined) {
-      updates.push(`${f} = ?`);
-      params.push(req.body[f]);
-    }
-  });
-  if (req.body.amenities !== undefined) {
-    updates.push('amenities = ?');
-    params.push(JSON.stringify(req.body.amenities));
-  }
-  if (!updates.length) return res.status(400).json({ error: 'No fields to update.' });
-  updates.push("updated_at = datetime('now')");
-  params.push(row.id);
-  await db.prepare(`UPDATE properties SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-
-  res.json({ ok: true });
+// Direct edits are switched off: every change to a listing (rent, details,
+// availability...) now goes through the admin-approval flow in
+// routes/api/agentEdits.js. These two stay only so that anything still calling
+// them gets a clear message, instead of silently changing a live listing.
+router.put('/properties/:id', (req, res) => {
+  res.status(403).json({ error: 'Changes to a listing now need admin approval — use the Edit button on My Properties.' });
 });
 
-// Manage availability status
-router.put('/properties/:id/status', async (req, res) => {
-  const row = await db.prepare('SELECT * FROM properties WHERE property_id = ?').get(req.params.id);
-  if (!row) return res.status(404).json({ error: 'Not found.' });
-  if (row.agent_id !== req.user.agentId) return res.status(403).json({ error: 'Not your property.' });
-  const { status } = req.body;
-  if (!['Available', 'Reserved', 'Rented', 'Unavailable'].includes(status)) {
-    return res.status(400).json({ error: 'Invalid status.' });
-  }
-  await db.prepare("UPDATE properties SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, row.id);
-  res.json({ ok: true });
+router.put('/properties/:id/status', (req, res) => {
+  res.status(403).json({ error: 'Changes to a listing now need admin approval — use the Edit button on My Properties.' });
 });
 
 // Add image to owned property

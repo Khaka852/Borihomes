@@ -1,0 +1,79 @@
+<h2>Pending Edits</h2>
+<p style="color:var(--ink-500);font-size:.85rem;max-width:640px;">Changes agents have asked to make to live listings. The public keeps seeing the current version until you approve a change. The agent is emailed your decision.</p>
+<div id="editsList"><div class="table-wrap" style="padding:20px;">Loading…</div></div>
+<script>
+function esc(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function editCard(e) {
+  const when = new Date(String(e.submitted_at).replace(' ', 'T') + 'Z').toLocaleString();
+  const rows = e.changes.map((c) => `
+    <tr>
+      <td style="font-weight:600;white-space:nowrap;vertical-align:top;">${esc(c.label)}</td>
+      <td style="color:var(--ink-500);white-space:pre-wrap;max-width:260px;vertical-align:top;">${esc(c.from)}</td>
+      <td style="white-space:pre-wrap;max-width:260px;vertical-align:top;">${esc(c.to)}</td>
+    </tr>`).join('');
+  return `
+  <div class="table-wrap" style="padding:18px;margin-bottom:16px;" data-edit="${esc(e.edit_id)}">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+      <div>
+        <strong>${esc(e.property_id)}</strong> — ${esc(e.title)}<br>
+        <span style="color:var(--ink-500);font-size:.82rem;">Requested by ${esc(e.agent_name)} · ${esc(when)}</span>
+      </div>
+      <a href="/properties/${encodeURIComponent(e.property_id)}" target="_blank" class="btn btn-outline btn-sm">View listing</a>
+    </div>
+    <div class="table-scroll">
+      <table style="margin-top:12px;">
+        <thead><tr><th>Change</th><th>Now</th><th>Requested</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary btn-sm" data-action="approve">Approve</button>
+      <button class="btn btn-danger btn-sm" data-action="reject">Reject</button>
+    </div>
+  </div>`;
+}
+
+async function loadEdits() {
+  const box = document.getElementById('editsList');
+  try {
+    const res = await fetch('/api/admin/property-edits');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load.');
+    box.innerHTML = data.results.length
+      ? data.results.map(editCard).join('')
+      : '<div class="table-wrap" style="padding:20px;">Nothing waiting — all caught up. ✅</div>';
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-error">${esc(err.message)}</div>`;
+  }
+}
+
+async function decideEdit(card, action) {
+  const id = card.dataset.edit;
+  let body = {};
+  if (action === 'reject') {
+    const note = prompt('Reason for rejecting (optional — the agent will see it):');
+    if (note === null) return; // cancelled
+    body = { note };
+  }
+  card.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+  try {
+    const res = await fetch(`/api/admin/property-edits/${id}/${action}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) { const r = await res.json(); alert(r.error || 'Something went wrong.'); }
+  } catch (err) {
+    alert('Could not reach the server. Please try again.');
+  }
+  loadEdits();
+}
+
+document.getElementById('editsList').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-action]');
+  if (btn) decideEdit(btn.closest('[data-edit]'), btn.dataset.action);
+});
+document.addEventListener('DOMContentLoaded', loadEdits);
+</script>

@@ -15,6 +15,7 @@
 
 const db = require('../db/connection');
 const { buildWhatsAppLink } = require('./whatsapp');
+const { describeProposed, parseChanges } = require('./propertyEdits');
 
 const TEST_SENDER = 'onboarding@resend.dev';
 let lastSkipReason = null;
@@ -192,7 +193,36 @@ async function notifyNewInspection(propertyId, c) {
   }
 }
 
+// The admin decided on a change request -> tell the agent who sent it (only them).
+async function notifyEditDecision(editId) {
+  try {
+    const e = await db.prepare('SELECT * FROM property_edits WHERE id = ?').get(editId);
+    if (!e || (e.status !== 'approved' && e.status !== 'rejected')) return;
+    const p = await db.prepare('SELECT * FROM properties WHERE id = ?').get(e.property_id);
+    const agent = await getAgentContact(e.agent_id);
+    if (!p || !agent) return;
+    const lines = describeProposed(parseChanges(e.changes))
+      .map((c) => `<li><strong>${esc(c.label)}:</strong> ${esc(c.to)}</li>`).join('');
+    const approved = e.status === 'approved';
+    const html = emailShell(
+      approved ? `Your change to ${esc(p.property_id)} is approved` : `Your change to ${esc(p.property_id)} wasn't approved`,
+      `<p>Hi ${esc(firstName(agent.name))},</p>
+       <p>${approved ? 'The admin approved your change, and it is now live:' : "The admin didn't approve this change, so your listing stays exactly as it was:"}</p>
+       <p style="margin:0 0 6px;"><strong>${esc(p.property_id)} — ${esc(p.title)}</strong></p>
+       <ul style="margin:0 0 12px;padding-left:20px;">${lines}</ul>
+       ${!approved && e.admin_note ? `<p style="margin:0;"><strong>Reason from the admin:</strong></p>${quote(e.admin_note)}` : ''}
+       ${approved
+         ? button('View your live listing', `${siteUrl()}/properties/${encodeURIComponent(p.property_id)}`)
+         : button('Open My Properties', `${siteUrl()}/agent/properties`)}
+       ${approved ? '' : '<p style="color:#667085;">You can send a new change from My Properties whenever you like.</p>'}`);
+    await sendToAgent(agent.email, approved ? `Your change to ${p.property_id} was approved` : `Your change to ${p.property_id} wasn't approved`, html);
+  } catch (err) {
+    console.error('notifyEditDecision failed:', err.message);
+  }
+}
+
 module.exports = {
+  notifyEditDecision,
   agentEmailsStatus, sendToAgent, escapeHtml, emailShell, button, naira, siteUrl, firstName,
   notifyListingApproved, notifyNewEnquiry, notifyNewInspection,
 };

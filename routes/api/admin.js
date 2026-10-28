@@ -9,6 +9,9 @@ const { notifyListingApproved } = require('../../utils/agentEmails');
 
 router.use(requireApiRole('admin'));
 
+// Changes agents have asked to make to live listings.
+router.use('/property-edits', require('./adminEdits'));
+
 async function fullPropertyView(r) {
   const imageRows = await db.prepare('SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order').all(r.id);
   const images = imageRows.map((i) => ({ url: i.image_url, type: i.image_type }));
@@ -33,6 +36,7 @@ router.get('/stats', async (req, res) => {
     totalEnquiries: await g('SELECT COUNT(*) c FROM enquiries'),
     pendingInspections: await g("SELECT COUNT(*) c FROM inspections WHERE status='Pending'"),
     newAgentApplications: await g("SELECT COUNT(*) c FROM agent_applications WHERE status='New'"),
+    pendingEdits: await g("SELECT COUNT(*) c FROM property_edits WHERE status='pending'"),
   });
 });
 

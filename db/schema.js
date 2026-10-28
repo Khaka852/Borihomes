@@ -152,6 +152,22 @@ async function createSchema() {
   if (!columnNames.includes('extra_fees')) {
     await db.exec(`ALTER TABLE properties ADD COLUMN extra_fees TEXT`);
   }
+
+  // Changes agents ask to make to LIVE listings. Nothing in here touches the
+  // public listing until the admin approves it.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS property_edits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      property_id INTEGER NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+      agent_id INTEGER REFERENCES agents(id) ON DELETE SET NULL,
+      changes TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','replaced','cancelled')),
+      admin_note TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      decided_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_property_edits_lookup ON property_edits(property_id, status);
+  `);
 }
 
 module.exports = createSchema;

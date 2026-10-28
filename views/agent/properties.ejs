@@ -54,16 +54,53 @@ function renderMyProperties() {
       <td>${statusPill(p.approval_status)}</td>
       <td>${new Date(p.created_at).toLocaleDateString()}</td>
       <td>
-        <select onchange="updateStatus('${p.id}', this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--ink-300);">
-          ${['Available','Reserved','Rented','Unavailable'].map(s => `<option value="${s}" ${s===p.status?'selected':''}>${s}</option>`).join('')}
-        </select>
+        ${statusPill(p.status)}
+        ${pendingNote(p)}
       </td>
-      <td><a href="/properties/${p.id}" target="_blank" class="btn btn-outline btn-sm">View</a></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-outline btn-sm" onclick="openEditModal('${p.id}')">Edit</button>
+        <a href="/properties/${p.id}" target="_blank" class="btn btn-outline btn-sm">View</a>
+      </td>
     </tr>
   `).join('');
 }
-async function updateStatus(id, status) {
-  await fetch(`/api/agent/properties/${id}/status`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status}) });
-  loadMyProperties();
+// Small note under the status when a change is still waiting for the admin.
+function pendingNote(p) {
+  if (!p.pending_edit) return '';
+  const parts = p.pending_edit.changes.map(c => c.field === 'description' ? 'Description' : `${c.label} → ${c.to}`);
+  return `<div style="font-size:.75rem;color:#92400e;margin-top:4px;max-width:220px;">⏳ Waiting for approval: ${editEsc(parts.join(', '))}</div>`;
 }
 </script>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head"><h3 id="editModalTitle">Edit property</h3><button class="modal-close" type="button" onclick="closeEditModal()">&times;</button></div>
+    <div id="editAlert"></div>
+    <div id="editPending" class="notice-box" style="display:none;margin-bottom:12px;">
+      <span></span> <button type="button" class="btn btn-outline btn-sm" id="editCancelPending" style="margin-top:8px;">Cancel that request</button>
+    </div>
+    <form id="editForm">
+      <p id="editNote" style="color:var(--ink-500);font-size:.82rem;margin-top:0;"></p>
+      <div class="form-group"><label>Availability</label>
+        <select class="form-control" id="editStatus"><option>Available</option><option>Reserved</option><option>Rented</option><option>Unavailable</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Rent per year (₦)</label><input class="form-control" type="number" min="1" step="1" id="editPrice" /></div>
+        <div class="form-group"><label>Property type</label>
+          <select class="form-control" id="editType"><option>Single Room</option><option>Self Contain</option><option>1 Bedroom</option><option>2 Bedroom</option><option>3 Bedroom</option><option>Shared Apartment</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Title</label><input class="form-control" id="editTitle" maxlength="120" /></div>
+      <div class="form-group"><label>Location</label><input class="form-control" id="editLocation" maxlength="100" /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Bedrooms</label><input class="form-control" type="number" min="0" max="50" step="1" id="editBeds" /></div>
+        <div class="form-group"><label>Bathrooms</label><input class="form-control" type="number" min="0" max="50" step="1" id="editBaths" /></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea class="form-control" id="editDescription" rows="4"></textarea></div>
+      <div class="form-group"><label>Amenities (comma separated)</label><input class="form-control" id="editAmenities" /></div>
+      <div class="form-group"><label>Extra move-in fees</label><div id="editFeeRows"></div><button type="button" class="btn btn-outline btn-sm" id="editAddFee">+ Add a fee</button></div>
+      <button class="btn btn-primary btn-block" type="submit" id="editSubmit">Send for approval</button>
+    </form>
+  </div>
+</div>
+<script src="/js/agent-edit-property.js"></script>
