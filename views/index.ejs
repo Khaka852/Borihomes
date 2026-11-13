@@ -4,6 +4,22 @@
     <h1>Find Your Place in <span>Bori.</span></h1>
     <p class="lead">Discover comfortable and affordable homes around Bori, with options suitable for Kenpoly students, residents and families.</p>
   </div>
+  <% if (bannerImages && bannerImages.length) { %>
+  <div class="container">
+    <div class="carousel hero-banner" data-carousel role="region" aria-label="Photos of Bori">
+      <div class="carousel-track">
+        <% bannerImages.forEach((img, i) => { %>
+          <img src="<%= img.url %>" alt="<%= img.alt %>"<%- i === 0 ? ' fetchpriority="high"' : '' %> />
+        <% }) %>
+      </div>
+      <% if (bannerImages.length > 1) { %>
+        <button class="carousel-btn prev" aria-label="Previous photo">&#8249;</button>
+        <button class="carousel-btn next" aria-label="Next photo">&#8250;</button>
+      <% } %>
+      <div class="carousel-dots"<%- bannerImages.length > 1 ? '' : ' style="display:none;"' %>></div>
+    </div>
+  </div>
+  <% } %>
   <div class="container">
     <form class="search-box" action="/properties" method="GET">
       <input type="text" name="location" list="locationSuggestions" placeholder="Type a street or area (e.g. Gokana Street)" autocomplete="off" />

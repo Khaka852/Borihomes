@@ -4,6 +4,27 @@ const db = require('../db/connection');
 const { toPublicProperty } = require('../utils/propertySerializer');
 const { KNOWN_AREAS } = require('../utils/locations');
 const { computeFees, agentFeePercent } = require('../utils/fees');
+const fs = require('fs');
+const path = require('path');
+
+// Home-page banner: every image in public/images/banner/ is shown, in filename
+// order (01-..., 02-..., 03-...). To add, replace or reorder photos, just change
+// the files in that folder — no code to edit. If the folder is empty or missing,
+// the banner is simply left out.
+const BANNER_DIR = path.join(__dirname, '..', 'public', 'images', 'banner');
+function getBannerImages() {
+  try {
+    return fs.readdirSync(BANNER_DIR)
+      .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+      .sort()
+      .map((f) => {
+        const words = f.replace(/\.[^.]+$/, '').replace(/^\d+[-_ ]*/, '').replace(/[-_]+/g, ' ').trim();
+        return { url: `/images/banner/${encodeURIComponent(f)}`, alt: words ? words.charAt(0).toUpperCase() + words.slice(1) : 'BoriHomes' };
+      });
+  } catch (e) {
+    return [];
+  }
+}
 
 async function getPublicFeatured(limit = 6) {
   const rows = await db.prepare(`
@@ -25,6 +46,7 @@ router.get('/', async (req, res) => {
     description: 'Search single rooms, self-contains, and 1-3 bedroom flats for rent in Bori, Rivers State — including listings near Ken Saro-Wiwa Polytechnic (Kenpoly). Verified agents, transparent pricing.',
     featured: await getPublicFeatured(6),
     locations: KNOWN_AREAS,
+    bannerImages: getBannerImages(),
   });
 });
 

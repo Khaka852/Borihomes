@@ -304,3 +304,13 @@ Every listing shows what moving in really costs, so nothing looks hidden:
 - **Agent fee percentage:** set by the `AGENT_FEE_PERCENT` setting on Render (default `10`; `0` hides the agent-fee line). It is worked out on the yearly rent only, not on the extra fees. Change it there — no code needed.
 - **Extra fees:** optional. Agents add them in "Add Property" — pick Caution / Drink / Agreement / Legal or type their own name, plus an amount (up to 8 per property). They are stored in a new optional `extra_fees` column that is added automatically on the next start; existing properties just show none.
 - The search **budget filter** still works on the rent amount only.
+
+## 19. Home Page Banner Photos
+
+The sliding banner under "Find Your Place in Bori" shows every photo in the folder `public/images/banner/`, in filename order — so `01-...` comes first, then `02-...`, and so on.
+
+- **Add / replace / reorder photos:** change the files in that folder on GitHub and commit; the site redeploys with the new banner. No code to edit. If the folder is empty, the banner is simply left out.
+- **File types:** `.jpg`, `.jpeg`, `.png` or `.webp`. Wide landscape photos about 1600 px across work best — the banner is cropped to a wide 16:9 shape, so keep the main subject near the middle. Keep each file under roughly 300 KB so the page stays fast on mobile data.
+- **Photo names become the picture description** read out by screen readers (`01-bori-town-roundabout.jpg` → "Bori town roundabout"), so give files meaningful names.
+- **The slight dim** is one number in `public/css/styles.css` (`.hero-banner::after`, the last value in `rgba(0, 0, 0, .22)`): `0` = no dim, higher = darker.
+- Only use photos you have the right to use. If a photo carries a photographer's watermark or credit, get their permission or credit them.
