@@ -1,23 +1,44 @@
-<section class="hero">
+<%
+  // The headline and intro are written ON the banner photos: the headline on the
+  // first photo, the intro split across the next two. With fewer photos the text is
+  // shared sensibly; with none, the original text-only hero is shown instead.
+  const hasBanner = bannerImages && bannerImages.length > 0;
+  const photoCount = hasBanner ? bannerImages.length : 0;
+  const introParts = ['Discover comfortable and affordable homes around Bori,', 'with options suitable for Kenpoly students, residents and families.'];
+  const introFull = introParts.join(' ');
+%>
+<section class="hero<%= hasBanner ? ' hero-with-banner' : '' %>">
+  <% if (hasBanner) { %>
+  <div class="carousel hero-banner" data-carousel role="region" aria-label="Find Your Place in Bori">
+    <div class="carousel-track">
+      <% bannerImages.forEach((img, i) => { %>
+        <div class="hero-slide">
+          <img src="<%= img.url %>" alt="<%= img.alt %>"<%- i === 0 ? ' fetchpriority="high"' : '' %> />
+          <div class="hero-slide-text">
+            <% if (i === 0) { %>
+              <span class="eyebrow">Bori, Rivers State</span>
+              <h1>Find Your Place in <span>Bori.</span></h1>
+              <% if (photoCount === 1) { %><p><%= introFull %></p><% } %>
+            <% } else if (i === 1) { %>
+              <p><%= photoCount === 2 ? introFull : introParts[0] %></p>
+            <% } else if (i === 2) { %>
+              <p><%= introParts[1] %></p>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+    <% if (photoCount > 1) { %>
+      <button class="carousel-btn prev" aria-label="Previous photo">&#8249;</button>
+      <button class="carousel-btn next" aria-label="Next photo">&#8250;</button>
+    <% } %>
+    <div class="carousel-dots"<%- photoCount > 1 ? '' : ' style="display:none;"' %>></div>
+  </div>
+  <% } else { %>
   <div class="container hero-inner">
     <span class="eyebrow">Bori, Rivers State</span>
     <h1>Find Your Place in <span>Bori.</span></h1>
     <p class="lead">Discover comfortable and affordable homes around Bori, with options suitable for Kenpoly students, residents and families.</p>
-  </div>
-  <% if (bannerImages && bannerImages.length) { %>
-  <div class="container">
-    <div class="carousel hero-banner" data-carousel role="region" aria-label="Photos of Bori">
-      <div class="carousel-track">
-        <% bannerImages.forEach((img, i) => { %>
-          <img src="<%= img.url %>" alt="<%= img.alt %>"<%- i === 0 ? ' fetchpriority="high"' : '' %> />
-        <% }) %>
-      </div>
-      <% if (bannerImages.length > 1) { %>
-        <button class="carousel-btn prev" aria-label="Previous photo">&#8249;</button>
-        <button class="carousel-btn next" aria-label="Next photo">&#8250;</button>
-      <% } %>
-      <div class="carousel-dots"<%- bannerImages.length > 1 ? '' : ' style="display:none;"' %>></div>
-    </div>
   </div>
   <% } %>
   <div class="container">

@@ -305,12 +305,21 @@ Every listing shows what moving in really costs, so nothing looks hidden:
 - **Extra fees:** optional. Agents add them in "Add Property" — pick Caution / Drink / Agreement / Legal or type their own name, plus an amount (up to 8 per property). They are stored in a new optional `extra_fees` column that is added automatically on the next start; existing properties just show none.
 - The search **budget filter** still works on the rent amount only.
 
-## 19. Home Page Banner Photos
+## 19. Home Page Banner (photos with the headline written on them)
 
-The sliding banner under "Find Your Place in Bori" shows every photo in the folder `public/images/banner/`, in filename order — so `01-...` comes first, then `02-...`, and so on.
+The top of the home page is a full-width sliding banner. The headline and intro are written **on** the photos:
 
-- **Add / replace / reorder photos:** change the files in that folder on GitHub and commit; the site redeploys with the new banner. No code to edit. If the folder is empty, the banner is simply left out.
-- **File types:** `.jpg`, `.jpeg`, `.png` or `.webp`. Wide landscape photos about 1600 px across work best — the banner is cropped to a wide 16:9 shape, so keep the main subject near the middle. Keep each file under roughly 300 KB so the page stays fast on mobile data.
+- **1st photo:** "Find Your Place in Bori."
+- **2nd photo:** "Discover comfortable and affordable homes around Bori,"
+- **3rd photo:** "with options suitable for Kenpoly students, residents and families."
+- Photos after the 3rd show no text. With only 2 photos, the 2nd carries the whole intro; with 1, it carries the headline and the intro. With no photos, the original text-only hero is shown.
+
+The text goes by **position**, not by picture — so whichever photo is first (alphabetically by file name) gets the headline.
+
+The photos are the files in `public/images/banner/`, shown in file-name order (`01-...`, `02-...`, `03-...`).
+
+- **Add / replace / reorder photos:** change the files in that folder on GitHub and commit; the site redeploys. No code to edit.
+- **File types:** `.jpg`, `.jpeg`, `.png` or `.webp`. Wide landscape photos about 1600 px across work best — the banner is cropped to fit the screen width, so keep the main subject near the middle. Keep each file under roughly 300 KB so the page stays fast on mobile data.
 - **Photo names become the picture description** read out by screen readers (`01-bori-town-roundabout.jpg` → "Bori town roundabout"), so give files meaningful names.
-- **The slight dim** is one number in `public/css/styles.css` (`.hero-banner::after`, the last value in `rgba(0, 0, 0, .22)`): `0` = no dim, higher = darker.
+- **The dim behind the text** is one number in `public/css/styles.css` (`.hero-slide::before`, the last value in `rgba(0, 0, 0, .4)`): `0` = no dim, higher = darker. Raise it if the text is hard to read on a bright photo.
 - Only use photos you have the right to use. If a photo carries a photographer's watermark or credit, get their permission or credit them.
