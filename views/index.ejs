@@ -13,7 +13,7 @@
     <div class="carousel-track">
       <% bannerImages.forEach((img, i) => { %>
         <div class="hero-slide">
-          <img src="<%= img.url %>" alt="<%= img.alt %>"<%- i === 0 ? ' fetchpriority="high"' : '' %> />
+          <img src="<%= img.url %>" alt="<%= img.alt %>"<%- i === 0 ? ' fetchpriority="high"' : ' loading="lazy" decoding="async"' %> />
           <div class="hero-slide-text">
             <% if (i === 0) { %>
               <span class="eyebrow">Bori, Rivers State</span>

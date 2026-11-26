@@ -21,7 +21,7 @@
     <% if (property.images.length > 0) { %>
       <div class="gallery-thumbs" id="galleryThumbs">
         <% property.images.forEach((img, i) => { %>
-          <img src="<%= img.url %>" class="<%= i === 0 ? 'active' : '' %>" data-full="<%= img.url %>" alt="<%= img.type %>" />
+          <img src="<%= img.url %>" class="<%= i === 0 ? 'active' : '' %>" data-full="<%= img.url %>" alt="<%= img.type %>" loading="lazy" decoding="async" />
         <% }) %>
       </div>
     <% } %>
