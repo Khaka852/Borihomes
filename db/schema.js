@@ -168,6 +168,30 @@ async function createSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_property_edits_lookup ON property_edits(property_id, status);
   `);
+
+  // Applicants now choose a password on the "Become an Agent" form. Only a
+  // one-way hash is ever stored (never the password), and it is wiped once the
+  // account exists or the application is declined.
+  const applicationColumns = (await db.prepare('PRAGMA table_info(agent_applications)').all()).map((c) => c.name);
+  if (!applicationColumns.includes('password_hash')) {
+    await db.exec(`ALTER TABLE agent_applications ADD COLUMN password_hash TEXT`);
+  }
+  if (!applicationColumns.includes('agent_user_id')) {
+    await db.exec(`ALTER TABLE agent_applications ADD COLUMN agent_user_id INTEGER`);
+  }
+
+  // "Forgot password" links. Only a hash of each link's secret is stored, so a
+  // copy of the database can't be used to reset anyone's password.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
 }
 
 module.exports = createSchema;

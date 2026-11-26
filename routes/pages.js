@@ -125,6 +125,15 @@ ${urls.join('\n')}
 </urlset>`);
 });
 
+router.get('/forgot-password', (req, res) => {
+  res.render('forgot-password', { title: 'Forgot password — BoriHomes', layout: false });
+});
+
+router.get('/reset-password', (req, res) => {
+  res.set('Cache-Control', 'no-store'); // this URL carries a one-time secret
+  res.render('reset-password', { title: 'Choose a new password — BoriHomes', layout: false });
+});
+
 router.get('/login', (req, res) => {
   if (req.user) return res.redirect(req.user.role === 'admin' ? '/admin' : '/agent');
   res.render('login', { title: 'Agent Login — BoriHomes', layout: false });

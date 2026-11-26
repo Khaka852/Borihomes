@@ -221,7 +221,33 @@ async function notifyEditDecision(editId) {
   }
 }
 
+// The admin created the agent's account from their application -> tell them they can log in.
+async function notifyAgentAccountCreated(userId) {
+  try {
+    const u = await db.prepare("SELECT name, email FROM users WHERE id = ? AND role = 'agent'").get(userId);
+    if (!u || !u.email) return;
+    const html = emailShell('Your BoriHomes agent account is ready', `
+      <p>Hi ${esc(firstName(u.name))}, your application was approved. 🎉</p>
+      <p>Log in with <strong>this email address</strong> and the password you chose when you applied.</p>
+      ${button('Log in', `${siteUrl()}/login`)}
+      <p style="color:#667085;">Forgot your password? Use "Forgot password?" on the login page.</p>`);
+    await sendToAgent(u.email, 'Your BoriHomes agent account is ready', html);
+  } catch (err) {
+    console.error('notifyAgentAccountCreated failed:', err.message);
+  }
+}
+
+// "Forgot password" link for an agent. `link` is built by the caller from a one-time secret.
+async function sendPasswordResetEmail(email, name, link) {
+  const html = emailShell('Reset your BoriHomes password', `
+    <p>Hi ${esc(firstName(name))}, we got a request to reset your password.</p>
+    ${button('Choose a new password', link)}
+    <p style="color:#667085;">This link works once and expires in 1 hour. If you didn't ask for this, ignore this email — your password stays exactly the same.</p>`);
+  return sendToAgent(email, 'Reset your BoriHomes password', html);
+}
+
 module.exports = {
+  notifyAgentAccountCreated, sendPasswordResetEmail,
   notifyEditDecision,
   agentEmailsStatus, sendToAgent, escapeHtml, emailShell, button, naira, siteUrl, firstName,
   notifyListingApproved, notifyNewEnquiry, notifyNewInspection,

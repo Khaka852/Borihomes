@@ -35,6 +35,7 @@ app.use('/api/enquiries', require('./routes/api/enquiries'));
 app.use('/api/inspections', require('./routes/api/inspections'));
 app.use('/api/agent-applications', require('./routes/api/agentApplications'));
 app.use('/api/auth', require('./routes/api/auth'));
+app.use('/api/auth', require('./routes/api/passwordReset'));
 app.use('/api/agent', require('./routes/api/agent'));
 app.use('/api/admin', require('./routes/api/admin'));
 app.use('/api/internal', require('./routes/api/digest'));

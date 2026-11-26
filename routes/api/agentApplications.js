@@ -5,6 +5,7 @@ const db = require('../../db/connection');
 const { publicFormLimiter } = require('../../middleware/rateLimiters');
 const { sendAdminNotification } = require('../../utils/email');
 const { escapeHtml } = require('../../utils/agentEmails');
+const { checkPassword, hashPassword } = require('../../utils/passwords');
 
 router.post(
   '/',
@@ -18,17 +19,24 @@ router.post(
   ],
   async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    // Only send back the message and field name — never echo submitted values (the form includes a password).
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array().map((e) => ({ msg: e.msg, path: e.path })) });
+
+    const passwordCheck = checkPassword(req.body.password);
+    if (!passwordCheck.ok) return res.status(400).json({ error: passwordCheck.error });
 
     const { full_name, phone, email, area_covered, experience } = req.body;
 
+    // The password itself is never saved — only its one-way hash.
+    const passwordHash = await hashPassword(req.body.password);
+
     const result = await db
-      .prepare(`INSERT INTO agent_applications (full_name, phone, email, area_covered, experience) VALUES (?,?,?,?,?)`)
-      .run(full_name, phone, email || null, area_covered || null, experience || null);
+      .prepare(`INSERT INTO agent_applications (full_name, phone, email, area_covered, experience, password_hash) VALUES (?,?,?,?,?,?)`)
+      .run(full_name, phone, email || null, area_covered || null, experience || null, passwordHash);
 
     res.status(201).json({
       applicationId: result.lastInsertRowid,
-      message: 'Thanks for your interest! Our team will review your application and reach out.',
+      message: 'Thanks for your interest! Our team will review your application. Once approved, you can log in with your email and the password you just chose.',
     });
 
     // Fire-and-forget — doesn't delay the response to the applicant.

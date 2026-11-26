@@ -5,7 +5,7 @@ const db = require('../../db/connection');
 const { requireApiRole } = require('../../middleware/auth');
 const { toPrivateProperty } = require('../../utils/propertySerializer');
 const { nextPropertyId } = require('../../utils/idGenerator');
-const { notifyListingApproved } = require('../../utils/agentEmails');
+const { notifyListingApproved, notifyAgentAccountCreated } = require('../../utils/agentEmails');
 
 router.use(requireApiRole('admin'));
 
@@ -248,8 +248,45 @@ router.delete('/landlords/:id', async (req, res) => {
 
 // ---- Agent Applications ("Become an Agent" form submissions) ----
 router.get('/agent-applications', async (req, res) => {
-  const rows = await db.prepare('SELECT * FROM agent_applications ORDER BY created_at DESC').all();
+  // The password hash is deliberately NOT selected — the dashboard only learns whether one exists.
+  const rows = await db.prepare(`
+    SELECT id, full_name, phone, email, area_covered, experience, status, created_at,
+           (password_hash IS NOT NULL) AS has_password, (agent_user_id IS NOT NULL) AS account_created
+    FROM agent_applications ORDER BY created_at DESC
+  `).all();
   res.json({ results: rows });
+});
+
+// One click: turn an application into a real agent account, using the password
+// the applicant chose. The admin never sees that password — the stored hash is
+// simply copied to the new account.
+router.post('/agent-applications/:id/create-account', async (req, res) => {
+  const app = await db.prepare('SELECT * FROM agent_applications WHERE id = ?').get(req.params.id);
+  if (!app) return res.status(404).json({ error: 'Not found.' });
+  if (app.agent_user_id) return res.status(409).json({ error: 'An account was already created for this application.' });
+  if (!app.password_hash) {
+    return res.status(400).json({ error: "This applicant didn't choose a password (they applied before passwords were added). Add them from the Agents page instead." });
+  }
+  const email = (app.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'This application has no email address.' });
+  if (await db.prepare('SELECT id FROM users WHERE email = ?').get(email)) {
+    return res.status(409).json({ error: 'An account with this email already exists.' });
+  }
+
+  let userId;
+  try {
+    const user = await db.prepare("INSERT INTO users (name, email, phone, password_hash, role) VALUES (?,?,?,?,'agent')")
+      .run(app.full_name, email, app.phone, app.password_hash);
+    userId = user.lastInsertRowid;
+  } catch (err) {
+    return res.status(409).json({ error: 'An account with this email already exists.' });
+  }
+  const agent = await db.prepare('INSERT INTO agents (user_id, bio) VALUES (?,?)').run(userId, '');
+  // The hash now lives on the account, so the copy on the application is wiped.
+  await db.prepare("UPDATE agent_applications SET status = 'Approved', agent_user_id = ?, password_hash = NULL WHERE id = ?").run(userId, app.id);
+
+  res.status(201).json({ ok: true, agent_id: agent.lastInsertRowid });
+  notifyAgentAccountCreated(userId);
 });
 
 router.put('/agent-applications/:id/status', async (req, res) => {
@@ -257,7 +294,9 @@ router.put('/agent-applications/:id/status', async (req, res) => {
   if (!['New', 'Contacted', 'Approved', 'Declined'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status.' });
   }
-  const result = await db.prepare('UPDATE agent_applications SET status = ? WHERE id = ?').run(status, req.params.id);
+  // A declined applicant's password hash is no longer needed, so it is wiped.
+  const result = await db.prepare(`UPDATE agent_applications SET status = ?, password_hash = CASE WHEN ? = 'Declined' THEN NULL ELSE password_hash END WHERE id = ?`)
+    .run(status, status, req.params.id);
   if (!result.changes) return res.status(404).json({ error: 'Not found.' });
   res.json({ ok: true });
 });

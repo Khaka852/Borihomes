@@ -1,36 +1,72 @@
 <h2>Agent Applications</h2>
-<p style="color:var(--ink-500);font-size:.85rem;max-width:640px;">People who applied via the public "Become an Agent" form. Review each one, contact them directly, then create their real account from the <a href="/admin/agents" style="color:var(--green-600);">Agents</a> page once approved.</p>
+<p style="color:var(--ink-500);font-size:.85rem;max-width:640px;">People who applied via the public "Become an Agent" form. Speak to each applicant first (use the phone number they gave), then click <strong>Create agent account</strong> — they can log in straight away with the email and password they chose. You never see their password.</p>
 <div class="table-wrap">
   <div class="table-scroll">
     <table>
-      <thead><tr><th>Name</th><th>Contact</th><th>Area(s)</th><th>Experience</th><th>Status</th></tr></thead>
-      <tbody id="appRows"><tr><td colspan="5">Loading…</td></tr></tbody>
+      <thead><tr><th>Name</th><th>Contact</th><th>Area(s)</th><th>Experience</th><th>Status</th><th>Account</th></tr></thead>
+      <tbody id="appRows"><tr><td colspan="6">Loading…</td></tr></tbody>
     </table>
   </div>
 </div>
 <script>
+// Everything shown here was typed by a member of the public, so it is escaped.
+function esc(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function accountCell(a) {
+  if (a.account_created) return '<span class="pill pill-green">✅ Account created</span>';
+  if (a.has_password) return `<button class="btn btn-primary btn-sm" data-create="${esc(a.id)}">Create agent account</button>`;
+  return '<span style="font-size:.78rem;color:var(--ink-500);">No password (older application) — add them from the Agents page</span>';
+}
+
 async function loadApplications() {
   const res = await fetch('/api/admin/agent-applications');
   const data = await res.json();
   const tbody = document.getElementById('appRows');
-  if (!data.results.length) { tbody.innerHTML = '<tr><td colspan="5">No applications yet.</td></tr>'; return; }
+  if (!data.results.length) { tbody.innerHTML = '<tr><td colspan="6">No applications yet.</td></tr>'; return; }
   tbody.innerHTML = data.results.map(a => `
     <tr>
-      <td>${a.full_name}</td>
-      <td>${a.phone}${a.email ? '<br/>'+a.email : ''}</td>
-      <td>${a.area_covered || '<em>Not specified</em>'}</td>
-      <td style="max-width:260px;">${a.experience || ''}</td>
+      <td>${esc(a.full_name)}</td>
+      <td>${esc(a.phone)}${a.email ? '<br/>' + esc(a.email) : ''}</td>
+      <td>${a.area_covered ? esc(a.area_covered) : '<em>Not specified</em>'}</td>
+      <td style="max-width:260px;">${esc(a.experience)}</td>
       <td>
-        <select onchange="updateStatus(${a.id}, this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--ink-300);">
+        <select data-status="${esc(a.id)}" style="padding:4px 8px;border-radius:6px;border:1px solid var(--ink-300);">
           ${['New','Contacted','Approved','Declined'].map(s => `<option value="${s}" ${s===a.status?'selected':''}>${s}</option>`).join('')}
         </select>
       </td>
+      <td>${accountCell(a)}</td>
     </tr>
   `).join('');
 }
+
 async function updateStatus(id, status) {
   await fetch(`/api/admin/agent-applications/${id}/status`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({status}) });
   loadApplications();
 }
+
+async function createAccount(id, btn) {
+  const name = btn.closest('tr').children[0].textContent;
+  if (!confirm(`Create an agent account for ${name}? They'll be able to log in straight away.`)) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/admin/agent-applications/${id}/create-account`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) alert(data.error || 'Something went wrong.');
+    else alert('Account created. They can log in now with their email and the password they chose.');
+  } catch (err) { alert('Could not reach the server. Please try again.'); }
+  loadApplications();
+}
+
+document.getElementById('appRows').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('button[data-create]');
+  if (btn) createAccount(btn.dataset.create, btn);
+});
+document.getElementById('appRows').addEventListener('change', (ev) => {
+  const sel = ev.target.closest('select[data-status]');
+  if (sel) updateStatus(sel.dataset.status, sel.value);
+});
 loadApplications();
 </script>
